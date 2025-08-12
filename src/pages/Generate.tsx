@@ -32,7 +32,7 @@ const Generate = () => {
     
     try {
       // Generate variations using real LLM APIs with different LinkedIn prompt templates
-      const results = await generateLinkedInVariations(contentIdea, 6);
+      const results = await generateLinkedInVariations(contentIdea, 4);
       
       const newVariations: GeneratedVariation[] = results.map((result, index) => {
         // Extract hashtags from the content
@@ -81,7 +81,7 @@ const Generate = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-zinc-900">Generate Content</h1>
         <p className="text-zinc-600 mt-2">
-          Enter your content idea and generate 6 unique LinkedIn post variations
+          Enter your content idea and generate 4 unique LinkedIn post variations
         </p>
       </div>
 
@@ -105,7 +105,7 @@ const Generate = () => {
                 className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"
               />
               <p className="text-sm text-zinc-500 mt-2">
-                Just describe what you want to write about. Our AI will create 6 different variations using various LinkedIn writing styles.
+                Just describe what you want to write about. Our AI will create 4 different variations using various LinkedIn writing styles.
               </p>
             </div>
 
@@ -123,7 +123,7 @@ const Generate = () => {
               {generating ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  Generating 6 Variations...
+                  Generating 4 Variations...
                 </>
               ) : (
                 <>
@@ -261,7 +261,7 @@ const Generate = () => {
                 No Content Generated Yet
               </h3>
               <p className="text-zinc-600">
-                Enter a content idea and click "Generate Variations" to create 6 unique LinkedIn posts
+                Enter a content idea and click "Generate Variations" to create 4 unique LinkedIn posts
               </p>
             </div>
           )}

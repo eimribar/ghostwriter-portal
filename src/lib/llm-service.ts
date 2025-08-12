@@ -245,8 +245,13 @@ export async function generateLinkedInVariations(
   contentIdea: string,
   count: number = 4
 ): Promise<GenerateContentResponse[]> {
+  console.log('generateLinkedInVariations called with:', { contentIdea, count });
+  console.log('Google API Key configured:', !!apiConfig.google.apiKey);
+  console.log('API Key length:', apiConfig.google.apiKey?.length);
+  
   // Check if Google/Gemini is configured
   if (!apiConfig.google.apiKey) {
+    console.warn('No Google API key found, using mock data');
     // Fallback to mock data
     const mockVariations: GenerateContentResponse[] = [];
     for (let i = 0; i < count; i++) {
