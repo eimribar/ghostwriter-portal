@@ -133,6 +133,14 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000, s
   }
 
   try {
+    console.log('Calling Gemini 2.5 Pro with:', {
+      hasApiKey: !!apiConfig.google.apiKey,
+      hasSystemMessage: !!systemMessage,
+      promptLength: prompt.length,
+      temperature,
+      maxTokens
+    });
+
     // Use the correct Gemini 2.5 PRO endpoint with proper headers
     const response = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',
@@ -172,8 +180,11 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000, s
     const data = await response.json();
     
     if (!data.candidates || !data.candidates[0]) {
+      console.error('No candidates in response:', data);
       throw new Error('No content generated from Gemini');
     }
+    
+    console.log('Gemini 2.5 Pro response received, length:', data.candidates[0].content.parts[0].text.length);
     
     return {
       content: data.candidates[0].content.parts[0].text,

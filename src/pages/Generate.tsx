@@ -51,6 +51,9 @@ const Generate = () => {
       return;
     }
 
+    console.log('Starting generation for:', ideaText);
+    console.log('API Key configured:', !!import.meta.env.VITE_GOOGLE_API_KEY);
+
     setGenerating(true);
     
     try {
