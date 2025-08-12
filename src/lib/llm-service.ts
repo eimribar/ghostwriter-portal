@@ -141,7 +141,36 @@ async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1000, 
       maxTokens
     });
 
-    // Use the correct Gemini 2.5 PRO endpoint with proper headers
+    // Use the correct Gemini 2.5 PRO endpoint with proper systemInstruction
+    const requestBody: any = {
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 65536,
+      },
+    };
+    
+    // Add systemInstruction if provided
+    if (systemMessage) {
+      requestBody.systemInstruction = {
+        parts: [
+          {
+            text: systemMessage,
+          },
+        ],
+      };
+    }
+    
     const response = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',
       {
@@ -150,23 +179,7 @@ async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1000, 
           'Content-Type': 'application/json',
           'x-goog-api-key': apiConfig.google.apiKey,
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: systemMessage ? `${systemMessage}\n\nContent idea: ${prompt}` : prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature,
-            topK: 40,
-            topP: 0.95,
-            // Note: Thinking cannot be disabled on Gemini 2.5 Pro
-          },
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 
