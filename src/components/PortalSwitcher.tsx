@@ -1,7 +1,6 @@
-import { ArrowUpRight, Building2, User } from 'lucide-react';
+import { ArrowUpRight, User } from 'lucide-react';
 
 const PortalSwitcher = () => {
-  const currentPortal = 'ghostwriter';
   const userPortalUrl = import.meta.env.PROD 
     ? 'https://unified-linkedin-project.vercel.app' 
     : 'http://localhost:8080';
