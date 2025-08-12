@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import ContentLake from './pages/ContentLake';
 import Generate from './pages/Generate';
+import Ideation from './pages/Ideation';
+import Clients from './pages/Clients';
+import Schedule from './pages/Schedule';
 
 function App() {
   return (
@@ -11,22 +14,13 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/content-lake" replace />} />
           <Route path="/content-lake" element={<ContentLake />} />
+          <Route path="/ideation" element={<Ideation />} />
           <Route path="/generate" element={<Generate />} />
-          <Route path="/schedule" element={
-            <div className="flex-1 bg-zinc-50 p-8">
-              <h1 className="text-3xl font-bold text-zinc-900">Schedule</h1>
-              <p className="text-zinc-600 mt-1">Coming soon...</p>
-            </div>
-          } />
+          <Route path="/schedule" element={<Schedule />} />
+          <Route path="/clients" element={<Clients />} />
           <Route path="/analytics" element={
             <div className="flex-1 bg-zinc-50 p-8">
               <h1 className="text-3xl font-bold text-zinc-900">Analytics</h1>
-              <p className="text-zinc-600 mt-1">Coming soon...</p>
-            </div>
-          } />
-          <Route path="/clients" element={
-            <div className="flex-1 bg-zinc-50 p-8">
-              <h1 className="text-3xl font-bold text-zinc-900">Clients</h1>
               <p className="text-zinc-600 mt-1">Coming soon...</p>
             </div>
           } />

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Database, Sparkles, Calendar, BarChart3, Settings, Users } from 'lucide-react';
+import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb } from 'lucide-react';
 
 const Navigation = () => {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -22,6 +22,11 @@ const Navigation = () => {
         <NavLink to="/content-lake" className={linkClass}>
           <Database className="h-4 w-4" />
           Content Lake
+        </NavLink>
+        
+        <NavLink to="/ideation" className={linkClass}>
+          <Lightbulb className="h-4 w-4" />
+          Ideation
         </NavLink>
         
         <NavLink to="/generate" className={linkClass}>
