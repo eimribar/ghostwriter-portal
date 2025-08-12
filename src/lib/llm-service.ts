@@ -138,7 +138,7 @@ async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1000, 
       hasSystemMessage: !!systemMessage,
       promptLength: prompt.length,
       temperature,
-      maxTokens
+      maxTokens: _maxTokens
     });
 
     // Use the correct Gemini 2.5 PRO endpoint with proper systemInstruction
