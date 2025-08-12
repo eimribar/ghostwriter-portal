@@ -132,9 +132,9 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000): 
   }
 
   try {
-    // Use the correct Gemini 2.5 Flash endpoint with proper headers
+    // Use the correct Gemini 2.5 PRO endpoint with proper headers
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',
       {
         method: 'POST',
         headers: {
@@ -158,9 +158,7 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000): 
             maxOutputTokens: maxTokens,
             topK: 40,
             topP: 0.95,
-            thinkingConfig: {
-              thinkingBudget: 0  // Disable thinking for faster response
-            }
+            // Note: Thinking cannot be disabled on Gemini 2.5 Pro
           },
         }),
       }
@@ -181,7 +179,7 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000): 
     return {
       content: data.candidates[0].content.parts[0].text,
       provider: 'google',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
     };
   } catch (error) {
     console.error('Google API error:', error);
