@@ -491,7 +491,7 @@ class AutomationService {
     return { generated };
   }
 
-  private async executeApproveAction(rule: AutomationRule, context?: any) {
+  private async executeApproveAction(rule: AutomationRule, _context?: any) {
     const config = rule.action_config.approve;
     if (!config) throw new Error('Invalid approve configuration');
     
@@ -524,7 +524,7 @@ class AutomationService {
     return { approved };
   }
 
-  private async executePublishAction(rule: AutomationRule, _context?: any) {
+  private async executePublishAction(rule: AutomationRule, context?: any) {
     const config = rule.action_config.publish;
     if (!config) throw new Error('Invalid publish configuration');
     
