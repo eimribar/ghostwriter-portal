@@ -54,19 +54,11 @@ const Generate = () => {
     setGenerating(true);
     
     try {
-      // Build the prompt
-      const prompt = `Create a LinkedIn post about: ${ideaText}
+      // Simple content idea - the system messages handle all the instructions
+      const contentIdea = ideaText;
       
-      ${hook ? `Start with this hook: ${hook}` : ''}
-      ${keyPoints.filter(kp => kp).length > 0 ? `Key points to cover: ${keyPoints.filter(kp => kp).join(', ')}` : ''}
-      Target audience: ${targetAudience}
-      Content format: ${contentFormat}
-      Tone: ${tone}
-      
-      Make it engaging, valuable, and authentic. Include relevant hashtags.`;
-      
-      // Generate variations using real LLM APIs
-      const results = await generateVariations(prompt, 6);
+      // Generate variations using real LLM APIs with different prompt templates
+      const results = await generateVariations(contentIdea, 6);
       
       const newVariations: GeneratedVariation[] = results.map((result, index) => {
         // Extract hashtags from the content

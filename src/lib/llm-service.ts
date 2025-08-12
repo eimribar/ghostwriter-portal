@@ -1,4 +1,5 @@
 import { apiConfig } from './api-config';
+import { linkedinPromptTemplates } from './linkedin-prompts';
 
 export interface GenerateContentRequest {
   prompt: string;
@@ -121,8 +122,8 @@ async function callAnthropic(prompt: string, temperature = 0.7, maxTokens = 1000
   }
 }
 
-// Google Gemini API call
-async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000): Promise<GenerateContentResponse> {
+// Google Gemini API call with optional system message
+async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000, systemMessage?: string): Promise<GenerateContentResponse> {
   if (!apiConfig.google.apiKey) {
     return {
       content: '[Google API key not configured - using mock response]\n\n' + generateMockContent(prompt),
@@ -146,9 +147,7 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000): 
             {
               parts: [
                 {
-                  text: `You are a professional LinkedIn content creator. Create engaging, valuable content.
-                  
-                  ${prompt}`,
+                  text: systemMessage ? `${systemMessage}\n\nContent idea: ${prompt}` : prompt,
                 },
               ],
             },
@@ -230,59 +229,66 @@ export async function generateContent(request: GenerateContentRequest): Promise<
   }
 }
 
-// Generate multiple variations
-export async function generateVariations(
-  prompt: string,
-  count: number = 6
+// Generate LinkedIn content with different style variations
+export async function generateLinkedInVariations(
+  contentIdea: string,
+  count: number = 4
 ): Promise<GenerateContentResponse[]> {
-  // Check which providers are configured
-  const hasGoogle = !!apiConfig.google.apiKey;
-  const hasOpenAI = !!apiConfig.openai.apiKey;
-  const hasAnthropic = !!apiConfig.anthropic.apiKey;
-  
+  // Check if Google/Gemini is configured
+  if (!apiConfig.google.apiKey) {
+    // Fallback to mock data
+    const mockVariations: GenerateContentResponse[] = [];
+    for (let i = 0; i < count; i++) {
+      mockVariations.push({
+        content: generateMockContent(contentIdea),
+        provider: 'google',
+        model: 'mock',
+      });
+    }
+    return mockVariations;
+  }
+
   const variations: Promise<GenerateContentResponse>[] = [];
   
-  // If Google is configured, use it for all variations with different temperatures
-  if (hasGoogle) {
-    for (let i = 0; i < count; i++) {
-      variations.push(
-        generateContent({
-          prompt: `${prompt}\n\nVariation ${i + 1}: Make this unique and engaging with a different perspective.`,
-          provider: 'google',
-          temperature: 0.6 + (i * 0.1), // Vary temperature from 0.6 to 1.1 for diversity
-        })
-      );
-    }
-  } 
-  // Fallback to other providers if available
-  else if (hasOpenAI || hasAnthropic) {
-    const providers = [];
-    if (hasOpenAI) providers.push('openai' as const);
-    if (hasAnthropic) providers.push('anthropic' as const);
-    
-    for (let i = 0; i < count; i++) {
-      const provider = providers[i % providers.length] as 'openai' | 'anthropic';
-      variations.push(
-        generateContent({
-          prompt: `${prompt}\n\nVariation ${i + 1}: Make this unique and engaging.`,
-          provider,
-          temperature: 0.7 + (i * 0.05),
-        })
-      );
-    }
+  // Use the first 4 LinkedIn prompt templates
+  const templates = linkedinPromptTemplates.slice(0, Math.min(count, 4));
+  
+  // Generate content using each template with different styles
+  for (let i = 0; i < templates.length; i++) {
+    const template = templates[i];
+    variations.push(
+      callGoogle(
+        contentIdea,
+        0.7 + (i * 0.05), // Vary temperature slightly
+        2000, // More tokens for LinkedIn posts
+        template.systemMessage
+      )
+    );
   }
-  // Use mock data if no providers configured
-  else {
-    for (let i = 0; i < count; i++) {
+  
+  // If we need more than 4 variations, repeat with different temperatures
+  if (count > 4) {
+    for (let i = 4; i < count; i++) {
+      const template = templates[i % templates.length];
       variations.push(
-        generateContent({
-          prompt,
-          provider: 'google', // Will fallback to mock
-          temperature: 0.7,
-        })
+        callGoogle(
+          contentIdea,
+          0.8 + ((i - 4) * 0.05),
+          2000,
+          template.systemMessage
+        )
       );
     }
   }
   
   return Promise.all(variations);
+}
+
+// Generate multiple variations (legacy function for backward compatibility)
+export async function generateVariations(
+  prompt: string,
+  count: number = 6
+): Promise<GenerateContentResponse[]> {
+  // Use the new LinkedIn-specific generation
+  return generateLinkedInVariations(prompt, count);
 }
