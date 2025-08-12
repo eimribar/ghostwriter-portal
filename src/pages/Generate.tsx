@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, Save, Eye } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, Save } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface GeneratedVariation {
@@ -117,7 +117,7 @@ const Generate = () => {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const handleSendToClient = (variation: GeneratedVariation) => {
+  const handleSendToClient = () => {
     alert(`Sent to client for approval: ${clients.find(c => c.id === selectedClient)?.name}`);
   };
 
@@ -365,7 +365,7 @@ const Generate = () => {
                       Save Draft
                     </button>
                     <button 
-                      onClick={() => handleSendToClient(variations[selectedIndex])}
+                      onClick={handleSendToClient}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors text-sm"
                     >
                       <ChevronRight className="h-4 w-4" />

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, TrendingUp, Users, FileText, Hash, Star, ExternalLink, Plus, RefreshCw } from 'lucide-react';
-import { supabase, Creator, ContentPost } from '../lib/supabase';
-import { cn } from '../lib/utils';
+import { Search, Filter, TrendingUp, Users, FileText, Star, ExternalLink, Plus, RefreshCw } from 'lucide-react';
+import type { Creator, ContentPost } from '../lib/supabase';
 
 interface CreatorWithPosts extends Creator {
   posts?: ContentPost[];
@@ -9,10 +8,10 @@ interface CreatorWithPosts extends Creator {
 
 const ContentLake = () => {
   const [creators, setCreators] = useState<CreatorWithPosts[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTheme, setSelectedTheme] = useState('all');
-  const [minReactions, setMinReactions] = useState(100);
+  const [minReactions] = useState(100);
   const [selectedCreator, setSelectedCreator] = useState<CreatorWithPosts | null>(null);
 
   // Mock data for development
