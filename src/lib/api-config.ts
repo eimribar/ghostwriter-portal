@@ -20,7 +20,7 @@ export const apiConfig = {
   },
   
   google: {
-    apiKey: import.meta.env.VITE_GOOGLE_API_KEY || 'AIzaSyBf1vfywyUHLKs_SNAaiU1tvwhi2c0J7Ek',
+    apiKey: import.meta.env.VITE_GOOGLE_API_KEY || '',
     model: 'gemini-2.5-pro',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
   },
