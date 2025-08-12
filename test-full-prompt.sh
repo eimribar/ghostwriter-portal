@@ -6,7 +6,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:
   -H "x-goog-api-key: AIzaSyBf1vfywyUHLKs_SNAaiU1tvwhi2c0J7Ek" \
   -H 'Content-Type: application/json' \
   -X POST \
-  -d @- <<'EOF' | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['candidates'][0]['content']['parts'][0]['text'] if 'candidates' in data and data['candidates'] else 'No content generated')"
+  -d @- <<'EOF' | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['candidates'][0]['content']['parts'][0]['text'] if 'candidates' in data and data['candidates'] and 'parts' in data['candidates'][0]['content'] else json.dumps(data, indent=2))"
 {
   "contents": [
     {
@@ -19,7 +19,6 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:
   ],
   "generationConfig": {
     "temperature": 0.7,
-    "maxOutputTokens": 8192,
     "topK": 40,
     "topP": 0.95
   }

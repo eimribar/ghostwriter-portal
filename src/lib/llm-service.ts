@@ -123,7 +123,7 @@ async function callAnthropic(prompt: string, temperature = 0.7, maxTokens = 1000
 }
 
 // Google Gemini API call with optional system message
-async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000, systemMessage?: string): Promise<GenerateContentResponse> {
+async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1000, systemMessage?: string): Promise<GenerateContentResponse> {
   if (!apiConfig.google.apiKey) {
     return {
       content: '[Google API key not configured - using mock response]\n\n' + generateMockContent(prompt),
@@ -162,7 +162,6 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000, s
           ],
           generationConfig: {
             temperature,
-            maxOutputTokens: maxTokens,
             topK: 40,
             topP: 0.95,
             // Note: Thinking cannot be disabled on Gemini 2.5 Pro
