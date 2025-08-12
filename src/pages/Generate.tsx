@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, Save } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { generateVariations } from '../lib/llm-service';
 
 interface GeneratedVariation {
   id: string;
@@ -52,8 +53,45 @@ const Generate = () => {
 
     setGenerating(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Build the prompt
+      const prompt = `Create a LinkedIn post about: ${ideaText}
+      
+      ${hook ? `Start with this hook: ${hook}` : ''}
+      ${keyPoints.filter(kp => kp).length > 0 ? `Key points to cover: ${keyPoints.filter(kp => kp).join(', ')}` : ''}
+      Target audience: ${targetAudience}
+      Content format: ${contentFormat}
+      Tone: ${tone}
+      
+      Make it engaging, valuable, and authentic. Include relevant hashtags.`;
+      
+      // Generate variations using real LLM APIs
+      const results = await generateVariations(prompt, 6);
+      
+      const newVariations: GeneratedVariation[] = results.map((result, index) => {
+        // Extract hashtags from the content
+        const hashtagMatch = result.content.match(/#\w+/g);
+        const hashtags = hashtagMatch ? hashtagMatch.map(tag => tag.substring(1)) : [];
+        
+        // Extract the first line as the hook
+        const lines = result.content.split('\n');
+        const extractedHook = lines[0] || hook || 'LinkedIn Post';
+        
+        return {
+          id: String(index + 1),
+          provider: result.provider as 'gemini' | 'claude' | 'gpt4',
+          content: result.content,
+          hook: extractedHook,
+          hashtags,
+          readTime: Math.ceil(result.content.split(' ').length / 200)
+        };
+      });
+      
+      setVariations(newVariations);
+      setSelectedIndex(0);
+    } catch (error) {
+      console.error('Generation error:', error);
+      // Fallback to mock data if API fails
       const mockVariations: GeneratedVariation[] = [
         {
           id: '1',
@@ -107,8 +145,9 @@ const Generate = () => {
       
       setVariations(mockVariations);
       setSelectedIndex(0);
-      setGenerating(false);
-    }, 2000);
+    }
+    
+    setGenerating(false);
   };
 
   const handleCopy = (content: string, index: number) => {

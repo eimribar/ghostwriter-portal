@@ -132,19 +132,23 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000): 
   }
 
   try {
+    // Use the correct Gemini 2.5 Flash endpoint with proper headers
     const response = await fetch(
-      `${apiConfig.google.endpoint}/${apiConfig.google.model}:generateContent?key=${apiConfig.google.apiKey}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': apiConfig.google.apiKey,
         },
         body: JSON.stringify({
           contents: [
             {
               parts: [
                 {
-                  text: prompt,
+                  text: `You are a professional LinkedIn content creator. Create engaging, valuable content.
+                  
+                  ${prompt}`,
                 },
               ],
             },
@@ -152,20 +156,32 @@ async function callGoogle(prompt: string, temperature = 0.7, maxTokens = 1000): 
           generationConfig: {
             temperature,
             maxOutputTokens: maxTokens,
+            topK: 40,
+            topP: 0.95,
+            thinkingConfig: {
+              thinkingBudget: 0  // Disable thinking for faster response
+            }
           },
         }),
       }
     );
 
     if (!response.ok) {
-      throw new Error(`Google API error: ${response.statusText}`);
+      const errorData = await response.text();
+      console.error('Google API error response:', errorData);
+      throw new Error(`Google API error: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json();
+    
+    if (!data.candidates || !data.candidates[0]) {
+      throw new Error('No content generated from Gemini');
+    }
+    
     return {
       content: data.candidates[0].content.parts[0].text,
       provider: 'google',
-      model: apiConfig.google.model,
+      model: 'gemini-2.5-flash',
     };
   } catch (error) {
     console.error('Google API error:', error);
@@ -221,17 +237,50 @@ export async function generateVariations(
   prompt: string,
   count: number = 6
 ): Promise<GenerateContentResponse[]> {
-  const providers = ['openai', 'anthropic', 'google'] as const;
+  // Check which providers are configured
+  const hasGoogle = !!apiConfig.google.apiKey;
+  const hasOpenAI = !!apiConfig.openai.apiKey;
+  const hasAnthropic = !!apiConfig.anthropic.apiKey;
+  
   const variations: Promise<GenerateContentResponse>[] = [];
   
-  // Generate 2 variations per provider
-  for (const provider of providers) {
-    for (let i = 0; i < Math.ceil(count / 3); i++) {
+  // If Google is configured, use it for all variations with different temperatures
+  if (hasGoogle) {
+    for (let i = 0; i < count; i++) {
+      variations.push(
+        generateContent({
+          prompt: `${prompt}\n\nVariation ${i + 1}: Make this unique and engaging with a different perspective.`,
+          provider: 'google',
+          temperature: 0.6 + (i * 0.1), // Vary temperature from 0.6 to 1.1 for diversity
+        })
+      );
+    }
+  } 
+  // Fallback to other providers if available
+  else if (hasOpenAI || hasAnthropic) {
+    const providers = [];
+    if (hasOpenAI) providers.push('openai' as const);
+    if (hasAnthropic) providers.push('anthropic' as const);
+    
+    for (let i = 0; i < count; i++) {
+      const provider = providers[i % providers.length] as 'openai' | 'anthropic';
       variations.push(
         generateContent({
           prompt: `${prompt}\n\nVariation ${i + 1}: Make this unique and engaging.`,
           provider,
-          temperature: 0.7 + (i * 0.1), // Vary temperature for diversity
+          temperature: 0.7 + (i * 0.05),
+        })
+      );
+    }
+  }
+  // Use mock data if no providers configured
+  else {
+    for (let i = 0; i < count; i++) {
+      variations.push(
+        generateContent({
+          prompt,
+          provider: 'google', // Will fallback to mock
+          temperature: 0.7,
         })
       );
     }
