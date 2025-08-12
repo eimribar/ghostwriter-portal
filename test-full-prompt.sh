@@ -18,7 +18,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:
     }
   ],
   "generationConfig": {
-    "temperature": 0.7,
+    "temperature": 1,
     "topK": 40,
     "topP": 0.95
   }

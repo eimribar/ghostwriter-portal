@@ -277,7 +277,7 @@ export async function generateLinkedInVariations(
     variations.push(
       callGoogle(
         contentIdea,
-        0.7 + (i * 0.05), // Vary temperature slightly
+        1, // Temperature 1 for maximum creativity
         8192, // Use full token capacity for LinkedIn posts
         template.systemMessage
       )
@@ -291,7 +291,7 @@ export async function generateLinkedInVariations(
       variations.push(
         callGoogle(
           contentIdea,
-          0.8 + ((i - 4) * 0.05),
+          1, // Temperature 1
           8192,
           template.systemMessage
         )
