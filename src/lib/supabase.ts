@@ -1,14 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
-// These will be replaced with actual values in production
+// Supabase configuration from environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not configured. Database features will not work.');
-}
+// Create Supabase client only if credentials are provided
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null as any;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Helper to check if Supabase is configured
+export const isSupabaseConfigured = () => {
+  return !!(supabaseUrl && supabaseAnonKey);
+};
+
+if (!isSupabaseConfigured()) {
+  console.warn('⚠️ Supabase not configured. Using mock data. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local');
+}
 
 // Database types
 export interface Creator {
