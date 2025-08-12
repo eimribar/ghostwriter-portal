@@ -478,7 +478,7 @@ class AutomationService {
             content_text: result.content,
             hook: result.content.split('\n')[0],
             hashtags: this.extractHashtags(result.content),
-            llm_provider: 'gpt4',
+            llm_provider: 'openai',
             llm_model: result.model,
             status: 'pending',
           });

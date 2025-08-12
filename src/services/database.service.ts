@@ -6,6 +6,9 @@ import type {
   GeneratedContent 
 } from '../lib/supabase';
 
+// Re-export types
+export type { GeneratedContent, ContentIdea };
+
 // =====================================================
 // CLIENTS SERVICE
 // =====================================================
@@ -363,6 +366,24 @@ export const contentIdeasService = {
 // =====================================================
 
 export const generatedContentService = {
+  async getAll(): Promise<GeneratedContent[]> {
+    if (!isSupabaseConfigured()) {
+      return getMockGeneratedContent();
+    }
+    
+    const { data, error } = await supabase
+      .from('generated_content')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching all generated content:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
   async getByIdea(ideaId: string): Promise<GeneratedContent[]> {
     if (!isSupabaseConfigured()) {
       return getMockGeneratedContent().filter(c => c.idea_id === ideaId);
@@ -499,6 +520,24 @@ export const generatedContentService = {
     
     return true;
   },
+
+  async update(id: string, updates: Partial<GeneratedContent>): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      return true;
+    }
+    
+    const { error } = await supabase
+      .from('generated_content')
+      .update(updates)
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error updating content:', error);
+      return false;
+    }
+    
+    return true;
+  },
 };
 
 // =====================================================
@@ -521,6 +560,24 @@ export interface ScheduledPost {
 }
 
 export const scheduledPostsService = {
+  async getAll(): Promise<ScheduledPost[]> {
+    if (!isSupabaseConfigured()) {
+      return getMockScheduledPosts();
+    }
+    
+    const { data, error } = await supabase
+      .from('scheduled_posts')
+      .select('*')
+      .order('scheduled_for', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching all scheduled posts:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
   async getByClient(clientId: string): Promise<ScheduledPost[]> {
     if (!isSupabaseConfigured()) {
       return getMockScheduledPosts().filter(p => p.client_id === clientId);

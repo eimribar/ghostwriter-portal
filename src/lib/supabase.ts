@@ -53,32 +53,40 @@ export interface ContentPost {
 
 export interface ContentIdea {
   id: string;
-  user_id: string;
+  client_id?: string;
+  ghostwriter_id?: string;
+  user_id?: string;
   source_post_id?: string;
-  idea_text: string;
+  source?: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request';
+  title: string;
+  description?: string;
   hook?: string;
   key_points?: string[];
   target_audience?: string;
   content_format?: string;
-  status: 'draft' | 'ideation' | 'approved' | 'rejected';
-  llm_provider?: 'gemini' | 'claude' | 'gpt4' | 'manual';
+  category?: string;
+  priority?: 'high' | 'medium' | 'low';
+  status?: 'draft' | 'ready' | 'in-progress' | 'used' | 'archived';
+  score?: number;
   created_at: Date;
   updated_at: Date;
 }
 
 export interface GeneratedContent {
   id: string;
-  idea_id: string;
-  user_id: string;
+  idea_id?: string;
+  client_id?: string;
+  ghostwriter_id?: string;
+  user_id?: string;
   variant_number: number;
   content_text: string;
   hook: string;
   hashtags?: string[];
   estimated_read_time?: number;
-  llm_provider: 'gemini' | 'claude' | 'gpt4';
+  llm_provider: 'google' | 'anthropic' | 'openai';
   llm_model?: string;
   generation_prompt?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'revision_requested';
+  status: 'pending' | 'approved' | 'rejected' | 'revision_requested' | 'published';
   revision_notes?: string;
   approved_at?: Date;
   approved_by?: string;

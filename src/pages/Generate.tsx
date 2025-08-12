@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2 } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations } from '../lib/llm-service';
+import { generatedContentService, contentIdeasService } from '../services/database.service';
+import { useAuth } from '../contexts/AuthContext';
 
 interface GeneratedVariation {
   id: string;
@@ -13,11 +15,14 @@ interface GeneratedVariation {
 }
 
 const Generate = () => {
+  const { user } = useAuth();
   const [contentIdea, setContentIdea] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [variations, setVariations] = useState<GeneratedVariation[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [savedToDb, setSavedToDb] = useState(false);
 
   const handleGenerate = async () => {
     if (!contentIdea.trim()) {
@@ -57,12 +62,68 @@ const Generate = () => {
       
       setVariations(newVariations);
       setSelectedIndex(0);
+      
+      // Auto-save to database
+      await saveToDatabase(newVariations);
     } catch (error) {
       console.error('Generation error:', error);
       alert('Failed to generate content. Please try again.');
     }
     
     setGenerating(false);
+  };
+
+  const saveToDatabase = async (variationsToSave: GeneratedVariation[]) => {
+    setSaving(true);
+    setSavedToDb(false);
+    
+    try {
+      // First create a content idea
+      const idea = await contentIdeasService.create({
+        title: contentIdea.substring(0, 100), // First 100 chars as title
+        description: contentIdea,
+        source: 'manual',
+        priority: 'medium',
+        status: 'draft',
+        user_id: user?.id || 'anonymous',
+        client_id: undefined, // TODO: Add client selection
+      });
+      
+      if (!idea) {
+        console.error('Failed to create content idea');
+        return;
+      }
+      
+      // Save each variation as generated content
+      const savePromises = variationsToSave.map(async (variation, index) => {
+        return generatedContentService.create({
+          idea_id: idea.id,
+          client_id: undefined, // TODO: Add client selection
+          ghostwriter_id: user?.id || undefined,
+          variant_number: index + 1,
+          content_text: variation.content,
+          hook: variation.hook,
+          hashtags: variation.hashtags,
+          estimated_read_time: variation.readTime,
+          llm_provider: 'google', // Using Gemini
+          llm_model: 'gemini-2.5-pro',
+          generation_prompt: contentIdea,
+          status: 'pending', // Start in pending for approval
+        });
+      });
+      
+      const savedResults = await Promise.all(savePromises);
+      const successCount = savedResults.filter(r => r !== null).length;
+      
+      if (successCount > 0) {
+        setSavedToDb(true);
+        console.log(`Saved ${successCount} variations to database`);
+      }
+    } catch (error) {
+      console.error('Error saving to database:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCopy = (content: string, index: number) => {
@@ -135,6 +196,26 @@ const Generate = () => {
               )}
             </button>
           </div>
+
+          {/* Save Status Indicator */}
+          {(saving || savedToDb) && (
+            <div className={cn(
+              "mt-4 p-3 rounded-lg flex items-center gap-2",
+              savedToDb ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
+            )}>
+              {saving ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Saving to database...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Saved! Content sent to approval queue.
+                </>
+              )}
+            </div>
+          )}
 
           {/* Regenerate Button */}
           {variations.length > 0 && (

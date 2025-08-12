@@ -1,11 +1,31 @@
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut } from 'lucide-react';
+import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { generatedContentService } from '../services/database.service';
 
 const Navigation = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const [pendingCount, setPendingCount] = useState(0);
+  
+  useEffect(() => {
+    loadPendingCount();
+    // Refresh count every 30 seconds
+    const interval = setInterval(loadPendingCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  const loadPendingCount = async () => {
+    try {
+      const allContent = await generatedContentService.getAll();
+      const pending = allContent.filter(c => c.status === 'pending');
+      setPendingCount(pending.length);
+    } catch (error) {
+      console.error('Error loading pending count:', error);
+    }
+  };
   
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -44,6 +64,16 @@ const Navigation = () => {
         <NavLink to="/generate" className={linkClass}>
           <Sparkles className="h-4 w-4" />
           Generate
+        </NavLink>
+        
+        <NavLink to="/approval" className={linkClass}>
+          <CheckSquare className="h-4 w-4" />
+          <span className="flex-1">Approval Queue</span>
+          {pendingCount > 0 && (
+            <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+              {pendingCount}
+            </span>
+          )}
         </NavLink>
         
         <NavLink to="/schedule" className={linkClass}>
