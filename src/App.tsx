@@ -10,6 +10,7 @@ import Clients from './pages/Clients';
 import Schedule from './pages/Schedule';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import EnvTest from './pages/EnvTest';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
                   <Route path="/clients" element={<Clients />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/env-test" element={<EnvTest />} />
                 </Routes>
               </div>
             </ProtectedRoute>

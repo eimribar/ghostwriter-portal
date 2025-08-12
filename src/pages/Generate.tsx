@@ -27,6 +27,8 @@ const Generate = () => {
 
     console.log('Starting generation for:', contentIdea);
     console.log('API Key configured:', !!import.meta.env.VITE_GOOGLE_API_KEY);
+    console.log('API Key first 10 chars:', import.meta.env.VITE_GOOGLE_API_KEY?.substring(0, 10));
+    console.log('All env vars:', Object.keys(import.meta.env));
 
     setGenerating(true);
     

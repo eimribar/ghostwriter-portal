@@ -1,6 +1,10 @@
 // API Configuration
 // Centralized configuration for all external APIs
 
+console.log('[api-config] Loading environment variables...');
+console.log('[api-config] VITE_GOOGLE_API_KEY exists:', !!import.meta.env.VITE_GOOGLE_API_KEY);
+console.log('[api-config] First 10 chars:', import.meta.env.VITE_GOOGLE_API_KEY?.substring(0, 10));
+
 export const apiConfig = {
   // AI Language Models
   openai: {
@@ -16,7 +20,7 @@ export const apiConfig = {
   },
   
   google: {
-    apiKey: import.meta.env.VITE_GOOGLE_API_KEY || '',
+    apiKey: import.meta.env.VITE_GOOGLE_API_KEY || 'AIzaSyBf1vfywyUHLKs_SNAaiU1tvwhi2c0J7Ek',
     model: 'gemini-2.5-pro',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
   },
