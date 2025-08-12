@@ -22,6 +22,7 @@ const Approval = () => {
     setLoading(true);
     try {
       let allContent = await generatedContentService.getAll();
+      console.log('Loaded content from database:', allContent);
       
       // Filter based on status
       if (filter !== 'all') {
@@ -32,6 +33,7 @@ const Approval = () => {
       allContent.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
       setContent(allContent);
+      console.log('Final content after filtering:', allContent);
     } catch (error) {
       console.error('Error loading content:', error);
     } finally {

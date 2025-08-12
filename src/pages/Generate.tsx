@@ -113,11 +113,15 @@ const Generate = () => {
       });
       
       const savedResults = await Promise.all(savePromises);
+      console.log('Save results:', savedResults);
       const successCount = savedResults.filter(r => r !== null).length;
       
       if (successCount > 0) {
         setSavedToDb(true);
         console.log(`Saved ${successCount} variations to database`);
+        console.log('Saved content IDs:', savedResults.filter(r => r !== null).map(r => r.id));
+      } else {
+        console.error('No variations were saved successfully');
       }
     } catch (error) {
       console.error('Error saving to database:', error);
