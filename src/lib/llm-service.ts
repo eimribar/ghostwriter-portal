@@ -279,7 +279,7 @@ export async function generateLinkedInVariations(
       callGoogle(
         contentIdea,
         0.7 + (i * 0.05), // Vary temperature slightly
-        2000, // More tokens for LinkedIn posts
+        8192, // Use full token capacity for LinkedIn posts
         template.systemMessage
       )
     );
@@ -293,7 +293,7 @@ export async function generateLinkedInVariations(
         callGoogle(
           contentIdea,
           0.8 + ((i - 4) * 0.05),
-          2000,
+          8192,
           template.systemMessage
         )
       );
