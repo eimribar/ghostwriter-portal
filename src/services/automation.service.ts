@@ -473,13 +473,12 @@ class AutomationService {
           // Save generated content
           const savedContent = await generatedContentService.create({
             idea_id: crypto.randomUUID(), // Would link to actual idea
-            client_id: client.id,
-            ghostwriter_id: rule.created_by || 'system',
+            user_id: client.id, // Using client.id as user_id temporarily
             variant_number: i + 1,
             content_text: result.content,
             hook: result.content.split('\n')[0],
             hashtags: this.extractHashtags(result.content),
-            llm_provider: 'openai' as any,
+            llm_provider: 'gpt4',
             llm_model: result.model,
             status: 'pending',
           });
@@ -525,7 +524,7 @@ class AutomationService {
     return { approved };
   }
 
-  private async executePublishAction(rule: AutomationRule, context?: any) {
+  private async executePublishAction(rule: AutomationRule, _context?: any) {
     const config = rule.action_config.publish;
     if (!config) throw new Error('Invalid publish configuration');
     
