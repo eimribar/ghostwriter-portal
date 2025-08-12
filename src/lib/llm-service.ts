@@ -264,9 +264,12 @@ export async function generateLinkedInVariations(
   // Use the first 4 LinkedIn prompt templates
   const templates = linkedinPromptTemplates.slice(0, Math.min(count, 4));
   
+  console.log('Using LinkedIn templates:', templates.map(t => t.name));
+  
   // Generate content using each template with different styles
   for (let i = 0; i < templates.length; i++) {
     const template = templates[i];
+    console.log(`Generating variation ${i + 1} with template: ${template.name}`);
     variations.push(
       callGoogle(
         contentIdea,

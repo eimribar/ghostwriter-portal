@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, Save } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { generateVariations } from '../lib/llm-service';
+import { generateLinkedInVariations } from '../lib/llm-service';
 
 interface GeneratedVariation {
   id: string;
@@ -60,8 +60,8 @@ const Generate = () => {
       // Simple content idea - the system messages handle all the instructions
       const contentIdea = ideaText;
       
-      // Generate variations using real LLM APIs with different prompt templates
-      const results = await generateVariations(contentIdea, 6);
+      // Generate variations using real LLM APIs with different LinkedIn prompt templates
+      const results = await generateLinkedInVariations(contentIdea, 6);
       
       const newVariations: GeneratedVariation[] = results.map((result, index) => {
         // Extract hashtags from the content
