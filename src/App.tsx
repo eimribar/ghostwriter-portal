@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/Navigation';
+import PortalSwitcher from './components/PortalSwitcher';
 import Login from './pages/Login';
 import ContentLake from './pages/ContentLake';
 import Generate from './pages/Generate';
@@ -38,6 +39,7 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/env-test" element={<EnvTest />} />
                 </Routes>
+                <PortalSwitcher />
               </div>
             </ProtectedRoute>
           } />
