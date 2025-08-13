@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Edit2, Clock, Filter, ChevronRight, Save, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generatedContentService, type GeneratedContent } from '../services/database.service';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext'; // Not using auth for now
 
 const Approval = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth(); // Not using user for now
   const [content, setContent] = useState<GeneratedContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'draft' | 'admin_approved' | 'admin_rejected'>('draft');
