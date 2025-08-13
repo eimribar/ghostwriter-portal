@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations } from '../lib/llm-service';
-import { generatedContentService, contentIdeasService, clientsService, type Client } from '../services/database.service';
+import { generatedContentService, clientsService, type Client } from '../services/database.service';
 import { useAuth } from '../contexts/AuthContext';
 
 interface GeneratedVariation {
