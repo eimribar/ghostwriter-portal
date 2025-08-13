@@ -336,6 +336,7 @@ export const contentIdeasService = {
     
     if (error) {
       console.error('Error creating idea:', error);
+      console.error('Error details:', error.message, error.details, error.hint);
       return null;
     }
     
@@ -450,6 +451,7 @@ export const generatedContentService = {
     
     if (error) {
       console.error('Error creating generated content:', error);
+      console.error('Error details:', error.message, error.details, error.hint);
       return null;
     }
     

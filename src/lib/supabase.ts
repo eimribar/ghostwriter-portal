@@ -86,7 +86,7 @@ export interface GeneratedContent {
   llm_provider: 'google' | 'anthropic' | 'openai';
   llm_model?: string;
   generation_prompt?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'revision_requested' | 'published';
+  status: 'draft' | 'admin_approved' | 'admin_rejected' | 'client_approved' | 'client_rejected' | 'scheduled' | 'published';
   revision_notes?: string;
   approved_at?: Date;
   approved_by?: string;

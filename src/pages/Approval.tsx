@@ -8,7 +8,7 @@ const Approval = () => {
   const { user } = useAuth();
   const [content, setContent] = useState<GeneratedContent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [filter, setFilter] = useState<'all' | 'draft' | 'admin_approved' | 'admin_rejected'>('draft');
   const [selectedContent, setSelectedContent] = useState<GeneratedContent | null>(null);
   const [editingContent, setEditingContent] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
@@ -44,26 +44,15 @@ const Approval = () => {
   const handleApprove = async (item: GeneratedContent) => {
     setProcessing(item.id);
     try {
-      // Update status to approved
-      const success = await generatedContentService.approve(
-        item.id,
-        user?.id || 'system',
-        'Approved via approval queue'
-      );
+      // Update status to admin_approved (goes to client for final approval)
+      const success = await generatedContentService.update(item.id, {
+        status: 'admin_approved',
+        approved_at: new Date(),
+        approved_by: user?.id || 'system',
+        revision_notes: 'Approved by admin for client review'
+      });
       
       if (success) {
-        // Auto-schedule for next available slot (e.g., tomorrow at 10 AM)
-        const scheduledFor = new Date();
-        scheduledFor.setDate(scheduledFor.getDate() + 1);
-        scheduledFor.setHours(10, 0, 0, 0);
-        
-        await scheduledPostsService.schedule(
-          item.id,
-          item.client_id || '',
-          scheduledFor,
-          'linkedin'
-        );
-        
         // Refresh the list
         await loadContent();
       }
@@ -79,7 +68,10 @@ const Approval = () => {
     setProcessing(item.id);
     
     try {
-      await generatedContentService.reject(item.id, reason || 'Rejected via approval queue');
+      await generatedContentService.update(item.id, {
+        status: 'admin_rejected',
+        revision_notes: reason || 'Rejected by admin'
+      });
       await loadContent();
     } catch (error) {
       console.error('Error rejecting content:', error);
@@ -117,14 +109,20 @@ const Approval = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Pending</span>;
-      case 'approved':
-        return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Approved</span>;
-      case 'rejected':
-        return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Rejected</span>;
-      case 'revision_requested':
-        return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Needs Revision</span>;
+      case 'draft':
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">Draft</span>;
+      case 'admin_approved':
+        return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Admin Approved</span>;
+      case 'admin_rejected':
+        return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Admin Rejected</span>;
+      case 'client_approved':
+        return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Client Approved</span>;
+      case 'client_rejected':
+        return <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">Client Rejected</span>;
+      case 'scheduled':
+        return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">Scheduled</span>;
+      case 'published':
+        return <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs">Published</span>;
       default:
         return null;
     }
@@ -155,37 +153,37 @@ const Approval = () => {
           All ({content.length})
         </button>
         <button
-          onClick={() => setFilter('pending')}
+          onClick={() => setFilter('draft')}
           className={cn(
             "px-4 py-2 rounded-lg transition-colors",
-            filter === 'pending' 
+            filter === 'draft' 
               ? "bg-zinc-900 text-white" 
               : "bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
           )}
         >
-          Pending ({content.filter(c => c.status === 'pending').length})
+          Drafts ({content.filter(c => c.status === 'draft').length})
         </button>
         <button
-          onClick={() => setFilter('approved')}
+          onClick={() => setFilter('admin_approved')}
           className={cn(
             "px-4 py-2 rounded-lg transition-colors",
-            filter === 'approved' 
+            filter === 'admin_approved' 
               ? "bg-zinc-900 text-white" 
               : "bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
           )}
         >
-          Approved ({content.filter(c => c.status === 'approved').length})
+          Approved ({content.filter(c => c.status === 'admin_approved').length})
         </button>
         <button
-          onClick={() => setFilter('rejected')}
+          onClick={() => setFilter('admin_rejected')}
           className={cn(
             "px-4 py-2 rounded-lg transition-colors",
-            filter === 'rejected' 
+            filter === 'admin_rejected' 
               ? "bg-zinc-900 text-white" 
               : "bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
           )}
         >
-          Rejected ({content.filter(c => c.status === 'rejected').length})
+          Rejected ({content.filter(c => c.status === 'admin_rejected').length})
         </button>
       </div>
 
@@ -215,13 +213,13 @@ const Approval = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {item.status === 'pending' && (
+                  {item.status === 'draft' && (
                     <>
                       <button
                         onClick={() => handleApprove(item)}
                         disabled={processing === item.id}
                         className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50"
-                        title="Approve"
+                        title="Approve for Client"
                       >
                         <CheckCircle className="w-5 h-5" />
                       </button>

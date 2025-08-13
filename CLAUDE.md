@@ -1,0 +1,258 @@
+# CLAUDE.md - Ghostwriter Portal Documentation
+
+## Project Overview
+**Ghostwriter Portal** - Admin dashboard for LinkedIn content generation and management. Part of a dual-portal system with the User Portal for client-facing interactions.
+
+## Tech Stack
+- **Frontend**: React 18 with TypeScript
+- **Build Tool**: Vite 7.1.2
+- **Styling**: Tailwind CSS with custom zinc/black/white design system
+- **Database**: Supabase (PostgreSQL with Row Level Security)
+- **AI Integration**: Google Gemini 2.5 Pro API
+- **Deployment**: Vercel
+- **State Management**: React Context API
+
+## Project Structure
+```
+ghostwriter-portal/
+├── src/
+│   ├── components/
+│   │   ├── Navigation.tsx      # Sidebar navigation
+│   │   ├── ProtectedRoute.tsx  # Auth protection
+│   │   └── PortalSwitcher.tsx  # Navigate between portals
+│   ├── contexts/
+│   │   └── AuthContext.tsx     # Authentication state
+│   ├── lib/
+│   │   ├── supabase.ts        # Supabase client config
+│   │   ├── api-config.ts      # API configurations
+│   │   ├── llm-service.ts     # Gemini API integration
+│   │   └── linkedin-prompts.ts # LinkedIn templates
+│   ├── pages/
+│   │   ├── Generate.tsx       # Content generation
+│   │   ├── Approval.tsx       # Content approval queue
+│   │   ├── Schedule.tsx       # Post scheduling
+│   │   ├── Clients.tsx        # Client management
+│   │   └── Analytics.tsx      # Performance metrics
+│   ├── services/
+│   │   └── database.service.ts # Database operations
+│   └── App.tsx                # Main app component
+├── .env.local                 # Local environment variables
+├── .env.example              # Environment template
+└── vercel.json               # Vercel configuration
+```
+
+## Environment Variables
+
+### Required for Production (Set in Vercel Dashboard)
+```bash
+# Supabase Configuration
+VITE_SUPABASE_URL=https://ifwscuvbtdokljwwbvex.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Google Gemini API
+VITE_GOOGLE_API_KEY=your_google_api_key_here
+
+# Optional APIs
+VITE_OPENAI_API_KEY=           # For GPT-4 integration
+VITE_ANTHROPIC_API_KEY=        # For Claude integration
+VITE_APIFY_API_KEY=            # For LinkedIn scraping
+```
+
+## Key Features
+
+### 1. Content Generation (`/generate`)
+- Uses Gemini 2.5 Pro API
+- 4 LinkedIn prompt templates (RevOps, SaaStr, Sales Excellence, Data/Listicle)
+- Temperature: 1.5 for creativity
+- Auto-saves to database with status: 'pending'
+- Supports hashtag extraction and read time estimation
+
+### 2. Approval Queue (`/approval`)
+- Lists all pending content
+- Approve → Auto-schedules to next available slot
+- Reject → Adds rejection reason
+- Edit → In-line content editing
+- Filter by status: all/pending/approved/rejected
+
+### 3. Portal Integration
+- **Portal Switcher**: Bottom-right button to navigate to User Portal
+- **Shared Database**: Both portals use same Supabase instance
+- **URLs**:
+  - Dev: http://localhost:5173 (Ghostwriter)
+  - Dev: http://localhost:8080 (User)
+  - Prod: https://ghostwriter-portal.vercel.app
+  - Prod: https://unified-linkedin-project.vercel.app
+
+## Database Schema
+
+### Key Tables
+```sql
+-- Content Ideas
+content_ideas (
+  id, client_id, user_id, title, description, 
+  source, priority, status, created_at, updated_at
+)
+
+-- Generated Content
+generated_content (
+  id, idea_id, client_id, ghostwriter_id, variant_number,
+  content_text, hook, hashtags[], estimated_read_time,
+  llm_provider, llm_model, generation_prompt,
+  status, approved_at, approved_by, rejection_reason,
+  created_at, updated_at
+)
+
+-- Scheduled Posts
+scheduled_posts (
+  id, content_id, client_id, scheduled_for,
+  platform, status, published_at, error_message,
+  created_at, updated_at
+)
+
+-- Clients
+clients (
+  id, company_name, contact_name, contact_email,
+  industry, created_at, updated_at
+)
+
+-- Users
+users (
+  id, email, full_name, role,
+  created_at, updated_at
+)
+```
+
+## LinkedIn Prompt Templates
+
+### 1. RevOps Perspective
+- Voice: Direct, data-driven, practical
+- Avoid: Jargon, fluff, theory without application
+- Focus: Metrics, efficiency, real problems
+
+### 2. SaaStr Style
+- Voice: Bold, controversial, experience-based
+- Avoid: Everyone agrees statements, hedging
+- Focus: Hard truths, specific examples
+
+### 3. Sales Excellence
+- Voice: Strategic, consultative, value-focused
+- Avoid: Pushy tactics, feature-dumping
+- Focus: Buyer psychology, trust-building
+
+### 4. Data/Listicle
+- Voice: Structured, evidence-based, scannable
+- Avoid: Walls of text, unsupported claims
+- Focus: Numbered insights, clear takeaways
+
+## API Integration
+
+### Gemini Configuration
+```typescript
+const requestBody = {
+  contents: [{ parts: [{ text: prompt }] }],
+  generationConfig: {
+    temperature: 1.5,
+    topK: 40,
+    topP: 0.95,
+    maxOutputTokens: 65536,
+  },
+  systemInstruction: { parts: [{ text: systemMessage }] }
+};
+```
+
+## Development Commands
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Type checking
+npm run type-check
+```
+
+## Deployment Process
+
+### Vercel Deployment
+1. Push changes to GitHub main branch
+2. Vercel auto-deploys on push
+3. Environment variables must be set in Vercel Dashboard
+4. Settings → Environment Variables → Add all required vars
+5. Redeploy after adding/updating environment variables
+
+### Local Development
+1. Copy `.env.example` to `.env.local`
+2. Add your API keys and credentials
+3. Run `npm run dev`
+4. Access at http://localhost:5173
+
+## Security Best Practices
+- **NEVER** commit API keys to Git
+- All sensitive data in `.env.local` (gitignored)
+- Use environment variables for all credentials
+- API keys should have restrictions:
+  - HTTP referrer restrictions
+  - API-specific restrictions
+  - IP restrictions where possible
+
+## Common Issues & Solutions
+
+### Issue: Blank page on production
+**Solution**: Add environment variables in Vercel Dashboard
+
+### Issue: Mock data instead of real AI content
+**Solution**: Ensure VITE_GOOGLE_API_KEY is set correctly
+
+### Issue: Posts not appearing in approval queue
+**Solution**: Check Supabase credentials are correct
+
+### Issue: "Variable already exists" error in Vercel
+**Solution**: Delete duplicate environment variable
+
+## Recent Updates (December 2024)
+
+### Security Fixes
+- Removed all hardcoded API keys from codebase
+- Deleted test files containing exposed credentials
+- Updated to use environment variables exclusively
+
+### Portal Integration
+- Added PortalSwitcher component
+- Synchronized Supabase database between portals
+- Implemented shared authentication context
+
+### UI/UX Improvements
+- Unified zinc/black/white design system
+- Fixed invisible gradient components
+- Simplified content generation interface
+- Added auto-save functionality
+
+## Contact & Support
+- **GitHub**: https://github.com/eimribar/ghostwriter-portal
+- **User Portal**: https://github.com/eimribar/unified-linkedin-project
+- **Primary Use Case**: LinkedIn content generation and management for agencies
+
+## Testing Checklist
+- [ ] Content generation creates 4 unique variations
+- [ ] Posts save to database with 'pending' status
+- [ ] Approval queue shows all pending posts
+- [ ] Approved posts auto-schedule
+- [ ] Portal switcher navigates correctly
+- [ ] Environment variables load properly
+- [ ] No API keys in source code
+- [ ] Build succeeds without TypeScript errors
+
+## Next Steps & Roadmap
+- [ ] Implement client selection in Generate page
+- [ ] Add bulk approval functionality
+- [ ] Create content calendar view
+- [ ] Add analytics dashboard
+- [ ] Implement real LinkedIn publishing
+- [ ] Add team collaboration features

@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations } from '../lib/llm-service';
-import { generatedContentService, contentIdeasService } from '../services/database.service';
+import { generatedContentService, contentIdeasService, clientsService, type Client } from '../services/database.service';
 import { useAuth } from '../contexts/AuthContext';
 
 interface GeneratedVariation {
@@ -23,10 +23,33 @@ const Generate = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [savedToDb, setSavedToDb] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [loadingClients, setLoadingClients] = useState(true);
+
+  useEffect(() => {
+    loadClients();
+  }, []);
+
+  const loadClients = async () => {
+    try {
+      const clientsList = await clientsService.getAll();
+      setClients(clientsList.filter(c => c.status === 'active'));
+      setLoadingClients(false);
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      setLoadingClients(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!contentIdea.trim()) {
       alert('Please enter a content idea');
+      return;
+    }
+
+    if (!selectedClient) {
+      alert('Please select a client');
       return;
     }
 
@@ -86,11 +109,12 @@ const Generate = () => {
         priority: 'medium',
         status: 'draft',
         user_id: user?.id || 'anonymous',
-        client_id: undefined, // TODO: Add client selection
+        client_id: selectedClient,
       });
       
       if (!idea) {
         console.error('Failed to create content idea');
+        alert('Failed to save content idea. Please check your database connection.');
         return;
       }
       
@@ -98,7 +122,7 @@ const Generate = () => {
       const savePromises = variationsToSave.map(async (variation, index) => {
         return generatedContentService.create({
           idea_id: idea.id,
-          client_id: undefined, // TODO: Add client selection
+          client_id: selectedClient,
           ghostwriter_id: user?.id || undefined,
           variant_number: index + 1,
           content_text: variation.content,
@@ -108,7 +132,7 @@ const Generate = () => {
           llm_provider: 'google', // Using Gemini
           llm_model: 'gemini-2.5-pro',
           generation_prompt: contentIdea,
-          status: 'pending', // Start in pending for approval
+          status: 'draft', // Start as draft for admin review
         });
       });
       
@@ -122,9 +146,11 @@ const Generate = () => {
         console.log('Saved content IDs:', savedResults.filter(r => r !== null).map(r => r.id));
       } else {
         console.error('No variations were saved successfully');
+        alert('Failed to save content variations. Please check your database connection.');
       }
     } catch (error) {
       console.error('Error saving to database:', error);
+      alert(`Error saving to database: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
@@ -159,11 +185,40 @@ const Generate = () => {
           <div className="bg-white rounded-xl border border-zinc-200 p-6">
             <div className="flex items-center gap-2 mb-6">
               <Wand2 className="w-5 h-5 text-zinc-700" />
-              <h2 className="text-lg font-semibold text-zinc-900">Content Idea</h2>
+              <h2 className="text-lg font-semibold text-zinc-900">Content Generation</h2>
+            </div>
+
+            {/* Client Selection */}
+            <div className="mb-6">
+              <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 mb-2">
+                <Users className="w-4 h-4" />
+                Select Client
+              </label>
+              <select
+                value={selectedClient}
+                onChange={(e) => setSelectedClient(e.target.value)}
+                className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                disabled={loadingClients}
+              >
+                <option value="">Choose a client...</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name} - {client.company}
+                  </option>
+                ))}
+              </select>
+              {selectedClient && (
+                <p className="text-xs text-zinc-500 mt-2">
+                  Generating content for: {clients.find(c => c.id === selectedClient)?.name}
+                </p>
+              )}
             </div>
 
             {/* Content Idea Input */}
             <div className="mb-6">
+              <label className="text-sm font-medium text-zinc-700 mb-2 block">
+                Content Idea
+              </label>
               <textarea
                 placeholder="Enter your content idea... (e.g., 'How AI is transforming customer service' or 'The importance of work-life balance in startups')"
                 value={contentIdea}
@@ -179,10 +234,10 @@ const Generate = () => {
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
-              disabled={generating || !contentIdea.trim()}
+              disabled={generating || !contentIdea.trim() || !selectedClient}
               className={cn(
                 "w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2",
-                generating || !contentIdea.trim()
+                generating || !contentIdea.trim() || !selectedClient
                   ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
                   : "bg-zinc-900 text-white hover:bg-zinc-800"
               )}
