@@ -98,6 +98,7 @@ const Generate = () => {
     try {
       // Skip content_idea creation - go straight to saving generated content
       // This avoids any issues with the content_ideas table
+      // Direct save to generated_content - no dependencies
       
       // Save each variation as generated content directly
       const savePromises = variationsToSave.map(async (variation, index) => {
