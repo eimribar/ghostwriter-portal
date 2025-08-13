@@ -96,28 +96,14 @@ const Generate = () => {
     setSavedToDb(false);
     
     try {
-      // First create a content idea
-      const idea = await contentIdeasService.create({
-        title: contentIdea.substring(0, 100), // First 100 chars as title
-        description: contentIdea,
-        source: 'manual',
-        priority: 'medium',
-        status: 'draft',
-        user_id: user?.id || 'anonymous',
-        client_id: selectedClient || undefined, // Make client optional
-      });
+      // Skip content_idea creation - go straight to saving generated content
+      // This avoids any issues with the content_ideas table
       
-      if (!idea) {
-        console.error('Failed to create content idea');
-        alert('Failed to save content idea. Please check your database connection.');
-        return;
-      }
-      
-      // Save each variation as generated content
+      // Save each variation as generated content directly
       const savePromises = variationsToSave.map(async (variation, index) => {
         return generatedContentService.create({
-          idea_id: idea.id,
-          client_id: selectedClient || undefined, // Make client optional
+          idea_id: undefined, // No idea needed
+          client_id: undefined, // No client needed
           ghostwriter_id: user?.id || undefined,
           variant_number: index + 1,
           content_text: variation.content,
