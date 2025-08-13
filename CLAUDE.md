@@ -83,7 +83,13 @@ VITE_APIFY_API_KEY=            # For LinkedIn scraping
   - Prod: https://ghostwriter-portal.vercel.app
   - Prod: https://unified-linkedin-project.vercel.app
 
-## Database Schema
+## Database Setup
+
+### Required Tables
+The application requires these tables to be created in Supabase. Run the migration scripts in the following order if any are missing:
+1. `supabase_migration.sql` - Creates core tables
+2. `fix_rls_policies.sql` - Sets up Row Level Security
+3. `fix_status_constraint.sql` - Fixes status enum values
 
 ### Key Tables
 ```sql
@@ -210,11 +216,22 @@ npm run type-check
 ### Issue: Mock data instead of real AI content
 **Solution**: Ensure VITE_GOOGLE_API_KEY is set correctly
 
-### Issue: Posts not appearing in approval queue
-**Solution**: Check Supabase credentials are correct
+### Issue: Posts not appearing in approval queue / not saving
+**Solution**: 
+1. Check Supabase credentials are correct
+2. Ensure `generated_content` table exists - run `supabase_migration.sql`
+3. Fix RLS policies - run `fix_rls_policies.sql`
+4. Fix status constraints - run `fix_status_constraint.sql`
+5. See DATABASE_SETUP.md for complete instructions
 
 ### Issue: "Variable already exists" error in Vercel
 **Solution**: Delete duplicate environment variable
+
+### Issue: "relation does not exist" error
+**Solution**: The `generated_content` table is missing. Run the migration scripts in order:
+1. `supabase_migration.sql`
+2. `fix_rls_policies.sql`
+3. `fix_status_constraint.sql`
 
 ## Recent Updates (December 2024)
 

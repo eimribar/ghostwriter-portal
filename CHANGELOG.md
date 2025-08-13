@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive CLAUDE.md documentation file with full technical specifications
 - CHANGELOG.md for tracking all major changes going forward
 
+## [2024.12.13] - 2024-12-13
+
+### Added
+- Database migration scripts for `generated_content` table
+- DATABASE_SETUP.md with complete setup instructions
+- RLS policy configuration scripts
+- Status constraint fix scripts
+- Better error handling for missing database tables
+- Clear error messages when tables don't exist
+
+### Fixed
+- Critical bug: Posts not saving due to missing `generated_content` table
+- Row Level Security policies blocking inserts
+- Status constraint not accepting 'draft' value
+- Database connection error messages now more informative
+
+### Changed
+- Improved error handling in database.service.ts to detect missing tables
+- Added specific alerts for database configuration issues
+
 ## [2024.12.12] - 2024-12-12
 
 ### Added
