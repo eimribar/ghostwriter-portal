@@ -379,6 +379,13 @@ export const generatedContentService = {
     
     if (error) {
       console.error('Error fetching all generated content:', error);
+      
+      // Check if it's a missing table error
+      if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        console.error('❌ CRITICAL: The generated_content table does not exist in Supabase!');
+        console.error('Please run the SQL migration script in supabase_migration.sql');
+      }
+      
       return [];
     }
     
@@ -452,6 +459,14 @@ export const generatedContentService = {
     if (error) {
       console.error('Error creating generated content:', error);
       console.error('Error details:', error.message, error.details, error.hint);
+      
+      // Check if it's a missing table error
+      if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        console.error('❌ CRITICAL: The generated_content table does not exist in Supabase!');
+        console.error('Please run the SQL migration script in supabase_migration.sql');
+        alert('Database Error: The generated_content table is missing. Please contact your administrator to run the database migration.');
+      }
+      
       return null;
     }
     
