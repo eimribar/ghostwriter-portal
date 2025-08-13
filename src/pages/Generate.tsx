@@ -102,20 +102,23 @@ const Generate = () => {
       
       // Save each variation as generated content directly
       const savePromises = variationsToSave.map(async (variation, index) => {
-        return generatedContentService.create({
-          idea_id: undefined, // No idea needed
-          client_id: undefined, // No client needed
-          ghostwriter_id: user?.id || undefined,
+        const dataToSave = {
+          idea_id: null, // Use null instead of undefined
+          client_id: null, // Use null instead of undefined
+          ghostwriter_id: null, // Simplify - no user for now
           variant_number: index + 1,
           content_text: variation.content,
-          hook: variation.hook,
-          hashtags: variation.hashtags,
-          estimated_read_time: variation.readTime,
-          llm_provider: 'google', // Using Gemini
+          hook: variation.hook || 'No hook',
+          hashtags: variation.hashtags || [],
+          estimated_read_time: variation.readTime || 1,
+          llm_provider: 'google',
           llm_model: 'gemini-2.5-pro',
           generation_prompt: contentIdea,
-          status: 'draft', // Start as draft for admin review
-        });
+          status: 'draft',
+        };
+        
+        console.log('Attempting to save:', dataToSave);
+        return generatedContentService.create(dataToSave);
       });
       
       const savedResults = await Promise.all(savePromises);
