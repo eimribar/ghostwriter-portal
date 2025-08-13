@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Copy, Eye, Search, Code, FileText, Hash, Zap, BarChart } from 'lucide-react';
+import { Plus, Edit2, Trash2, Copy, Eye, Search, Code, Hash, Zap, BarChart } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { promptTemplatesService, type PromptTemplate } from '../services/database.service';
 
@@ -15,7 +15,7 @@ const Prompts = () => {
   // Form state for create/edit
   const [formData, setFormData] = useState<Partial<PromptTemplate>>({
     name: '',
-    category: 'LinkedIn',
+    category: 'Content Generation',
     description: '',
     system_message: '',
     provider: 'google',
@@ -45,7 +45,7 @@ const Prompts = () => {
     }
   };
 
-  const categories = ['all', 'LinkedIn', 'Email', 'Blog', 'Twitter', 'Cold Outreach'];
+  const categories = ['all', 'Content Generation', 'Content Ideation', 'Content Editing'];
   
   const filteredPrompts = prompts.filter(prompt => {
     const matchesCategory = selectedCategory === 'all' || prompt.category === selectedCategory;
@@ -58,7 +58,7 @@ const Prompts = () => {
   const handleCreate = () => {
     setFormData({
       name: '',
-      category: 'LinkedIn',
+      category: 'Content Generation',
       description: '',
       system_message: '',
       provider: 'google',
@@ -128,10 +128,9 @@ const Prompts = () => {
 
   const getCategoryIcon = (category: string) => {
     switch(category) {
-      case 'LinkedIn': return <Hash className="w-4 h-4" />;
-      case 'Email': return <FileText className="w-4 h-4" />;
-      case 'Blog': return <FileText className="w-4 h-4" />;
-      case 'Twitter': return <Hash className="w-4 h-4" />;
+      case 'Content Generation': return <Zap className="w-4 h-4" />;
+      case 'Content Ideation': return <Hash className="w-4 h-4" />;
+      case 'Content Editing': return <Edit2 className="w-4 h-4" />;
       default: return <Code className="w-4 h-4" />;
     }
   };
@@ -332,11 +331,9 @@ const Prompts = () => {
                       onChange={(e) => setFormData({...formData, category: e.target.value})}
                       className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
                     >
-                      <option value="LinkedIn">LinkedIn</option>
-                      <option value="Email">Email</option>
-                      <option value="Blog">Blog</option>
-                      <option value="Twitter">Twitter</option>
-                      <option value="Cold Outreach">Cold Outreach</option>
+                      <option value="Content Generation">Content Generation</option>
+                      <option value="Content Ideation">Content Ideation</option>
+                      <option value="Content Editing">Content Editing</option>
                     </select>
                   </div>
                 </div>
