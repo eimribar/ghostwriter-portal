@@ -48,11 +48,6 @@ const Generate = () => {
       return;
     }
 
-    if (!selectedClient) {
-      alert('Please select a client');
-      return;
-    }
-
     console.log('Starting generation for:', contentIdea);
     console.log('API Key configured:', !!import.meta.env.VITE_GOOGLE_API_KEY);
     console.log('API Key first 10 chars:', import.meta.env.VITE_GOOGLE_API_KEY?.substring(0, 10));
@@ -109,7 +104,7 @@ const Generate = () => {
         priority: 'medium',
         status: 'draft',
         user_id: user?.id || 'anonymous',
-        client_id: selectedClient,
+        client_id: selectedClient || undefined, // Make client optional
       });
       
       if (!idea) {
@@ -122,7 +117,7 @@ const Generate = () => {
       const savePromises = variationsToSave.map(async (variation, index) => {
         return generatedContentService.create({
           idea_id: idea.id,
-          client_id: selectedClient,
+          client_id: selectedClient || undefined, // Make client optional
           ghostwriter_id: user?.id || undefined,
           variant_number: index + 1,
           content_text: variation.content,
@@ -188,31 +183,33 @@ const Generate = () => {
               <h2 className="text-lg font-semibold text-zinc-900">Content Generation</h2>
             </div>
 
-            {/* Client Selection */}
-            <div className="mb-6">
-              <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 mb-2">
-                <Users className="w-4 h-4" />
-                Select Client
-              </label>
-              <select
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                disabled={loadingClients}
-              >
-                <option value="">Choose a client...</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name} - {client.company}
-                  </option>
-                ))}
-              </select>
-              {selectedClient && (
-                <p className="text-xs text-zinc-500 mt-2">
-                  Generating content for: {clients.find(c => c.id === selectedClient)?.name}
-                </p>
-              )}
-            </div>
+            {/* Client Selection - OPTIONAL (hidden for now) */}
+            {false && (
+              <div className="mb-6">
+                <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 mb-2">
+                  <Users className="w-4 h-4" />
+                  Select Client (Optional)
+                </label>
+                <select
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                  className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  disabled={loadingClients}
+                >
+                  <option value="">No client selected...</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name} - {client.company}
+                    </option>
+                  ))}
+                </select>
+                {selectedClient && (
+                  <p className="text-xs text-zinc-500 mt-2">
+                    Generating content for: {clients.find(c => c.id === selectedClient)?.name}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Content Idea Input */}
             <div className="mb-6">
@@ -234,10 +231,10 @@ const Generate = () => {
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
-              disabled={generating || !contentIdea.trim() || !selectedClient}
+              disabled={generating || !contentIdea.trim()}
               className={cn(
                 "w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2",
-                generating || !contentIdea.trim() || !selectedClient
+                generating || !contentIdea.trim()
                   ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
                   : "bg-zinc-900 text-white hover:bg-zinc-800"
               )}
