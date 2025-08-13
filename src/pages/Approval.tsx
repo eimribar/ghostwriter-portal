@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Edit2, Clock, Filter, ChevronRight, Save, X } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { generatedContentService, scheduledPostsService, type GeneratedContent } from '../services/database.service';
+import { generatedContentService, type GeneratedContent } from '../services/database.service';
 import { useAuth } from '../contexts/AuthContext';
 
 const Approval = () => {
@@ -93,8 +93,8 @@ const Approval = () => {
     try {
       await generatedContentService.update(selectedContent.id, {
         content_text: editingContent,
-        status: 'revision_requested',
-        revision_notes: 'Edited via approval queue'
+        status: 'draft',
+        revision_notes: 'Edited via approval queue - needs re-approval'
       });
       
       setIsEditing(false);

@@ -20,7 +20,7 @@ const Navigation = () => {
   const loadPendingCount = async () => {
     try {
       const allContent = await generatedContentService.getAll();
-      const pending = allContent.filter(c => c.status === 'pending');
+      const pending = allContent.filter(c => c.status === 'draft');
       setPendingCount(pending.length);
     } catch (error) {
       console.error('Error loading pending count:', error);

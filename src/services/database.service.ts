@@ -481,7 +481,7 @@ export const generatedContentService = {
     const { error } = await supabase
       .from('generated_content')
       .update({
-        status: 'approved',
+        status: 'admin_approved',
         approved_at: new Date().toISOString(),
         approved_by: approvedBy,
         revision_notes: notes,
@@ -504,7 +504,7 @@ export const generatedContentService = {
     const { error } = await supabase
       .from('generated_content')
       .update({
-        status: 'rejected',
+        status: 'admin_rejected',
         revision_notes: notes,
       })
       .eq('id', id);

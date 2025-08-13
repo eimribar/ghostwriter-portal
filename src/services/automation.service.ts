@@ -480,7 +480,7 @@ class AutomationService {
             hashtags: this.extractHashtags(result.content),
             llm_provider: 'openai',
             llm_model: result.model,
-            status: 'pending',
+            status: 'draft',
           });
           
           generated.push(savedContent);
@@ -499,7 +499,7 @@ class AutomationService {
     const clients = await clientsService.getAll();
     
     for (const client of clients) {
-      const pendingContent = await generatedContentService.getByClient(client.id, 'pending');
+      const pendingContent = await generatedContentService.getByClient(client.id, 'draft');
       
       for (const content of pendingContent) {
         // Calculate quality score (would be more sophisticated in production)
