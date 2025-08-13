@@ -540,19 +540,25 @@ export const generatedContentService = {
 
   async update(id: string, updates: Partial<GeneratedContent>): Promise<boolean> {
     if (!isSupabaseConfigured()) {
+      console.warn('Supabase not configured, skipping update');
       return true;
     }
     
-    const { error } = await supabase
+    console.log('Updating content:', id, 'with:', updates);
+    
+    const { data, error } = await supabase
       .from('generated_content')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .select();
     
     if (error) {
       console.error('Error updating content:', error);
+      console.error('Error details:', error.message, error.details, error.hint);
       return false;
     }
     
+    console.log('Update successful:', data);
     return true;
   },
 };

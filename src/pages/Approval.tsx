@@ -43,21 +43,28 @@ const Approval = () => {
 
   const handleApprove = async (item: GeneratedContent) => {
     setProcessing(item.id);
+    console.log('Approving item:', item.id);
     try {
       // Update status to admin_approved (goes to client for final approval)
       const success = await generatedContentService.update(item.id, {
-        status: 'admin_approved',
-        approved_at: new Date(),
-        approved_by: user?.id || 'system',
+        status: 'admin_approved' as const,
+        approved_at: new Date().toISOString() as any, // Convert to ISO string for Supabase
+        approved_by: undefined, // No user tracking for now
         revision_notes: 'Approved by admin for client review'
       });
+      
+      console.log('Update success:', success);
       
       if (success) {
         // Refresh the list
         await loadContent();
+        alert('Content approved! Status changed to admin_approved');
+      } else {
+        alert('Failed to approve content. Check console for errors.');
       }
     } catch (error) {
       console.error('Error approving content:', error);
+      alert('Error approving content: ' + error);
     } finally {
       setProcessing(null);
     }
