@@ -3,7 +3,7 @@ import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Use
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations } from '../lib/llm-service';
 import { generatedContentService, clientsService, type Client } from '../services/database.service';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext'; // Not using auth for now
 
 interface GeneratedVariation {
   id: string;
@@ -15,7 +15,7 @@ interface GeneratedVariation {
 }
 
 const Generate = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth(); // Commented out - not using user for now
   const [contentIdea, setContentIdea] = useState('');
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -103,18 +103,20 @@ const Generate = () => {
       // Save each variation as generated content directly
       const savePromises = variationsToSave.map(async (variation, index) => {
         const dataToSave = {
-          idea_id: null, // Use null instead of undefined
-          client_id: null, // Use null instead of undefined
-          ghostwriter_id: null, // Simplify - no user for now
+          idea_id: undefined,
+          client_id: undefined,
+          ghostwriter_id: undefined,
+          user_id: undefined,
           variant_number: index + 1,
           content_text: variation.content,
           hook: variation.hook || 'No hook',
           hashtags: variation.hashtags || [],
           estimated_read_time: variation.readTime || 1,
-          llm_provider: 'google',
+          llm_provider: 'google' as const,
           llm_model: 'gemini-2.5-pro',
           generation_prompt: contentIdea,
-          status: 'draft',
+          status: 'draft' as const,
+          revision_notes: undefined,
         };
         
         console.log('Attempting to save:', dataToSave);
