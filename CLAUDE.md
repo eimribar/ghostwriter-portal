@@ -17,7 +17,7 @@
 ghostwriter-portal/
 ├── src/
 │   ├── components/
-│   │   ├── Navigation.tsx      # Sidebar navigation
+│   │   ├── Navigation.tsx      # Sidebar navigation with Prompts link
 │   │   ├── ProtectedRoute.tsx  # Auth protection
 │   │   └── PortalSwitcher.tsx  # Navigate between portals
 │   ├── contexts/
@@ -26,16 +26,21 @@ ghostwriter-portal/
 │   │   ├── supabase.ts        # Supabase client config
 │   │   ├── api-config.ts      # API configurations
 │   │   ├── llm-service.ts     # Gemini API integration
-│   │   └── linkedin-prompts.ts # LinkedIn templates
+│   │   └── linkedin-prompts.ts # LinkedIn templates (4 styles)
 │   ├── pages/
-│   │   ├── Generate.tsx       # Content generation
+│   │   ├── Generate.tsx       # Content generation (no client required)
 │   │   ├── Approval.tsx       # Content approval queue
+│   │   ├── Prompts.tsx        # Prompt management system
 │   │   ├── Schedule.tsx       # Post scheduling
 │   │   ├── Clients.tsx        # Client management
 │   │   └── Analytics.tsx      # Performance metrics
 │   ├── services/
-│   │   └── database.service.ts # Database operations
+│   │   └── database.service.ts # Database operations + promptTemplatesService
 │   └── App.tsx                # Main app component
+├── create_prompt_templates_table.sql  # Prompt system database schema
+├── populate_prompts.sql       # Actual LinkedIn prompts data
+├── FINAL_FIX_DATABASE.sql     # Database fixes for approval flow
+├── CHANGELOG.md               # Detailed change history
 ├── .env.local                 # Local environment variables
 ├── .env.example              # Environment template
 └── vercel.json               # Vercel configuration
@@ -61,18 +66,21 @@ VITE_APIFY_API_KEY=            # For LinkedIn scraping
 ## Key Features
 
 ### 1. Content Generation (`/generate`)
-- Uses Gemini 2.5 Pro API
+- Uses Gemini 2.0 Flash Exp API (updated model)
 - 4 LinkedIn prompt templates (RevOps, SaaStr, Sales Excellence, Data/Listicle)
 - Temperature: 1.5 for creativity
-- Auto-saves to database with status: 'pending'
+- Auto-saves to database with status: 'draft'
+- NO CLIENT SELECTION REQUIRED - bypasses content_ideas table
 - Supports hashtag extraction and read time estimation
+- Saves with client_id, idea_id, user_id as undefined
 
 ### 2. Approval Queue (`/approval`)
-- Lists all pending content
-- Approve → Auto-schedules to next available slot
-- Reject → Adds rejection reason
-- Edit → In-line content editing
-- Filter by status: all/pending/approved/rejected
+- Lists all draft content (status: 'draft')
+- Approve → Updates status to 'admin_approved'
+- Reject → Updates status to 'admin_rejected' with reason
+- Edit → In-line content editing with save
+- Filter by status: all/draft/admin_approved/admin_rejected
+- Content flows: draft → admin_approved → client_approved → scheduled/published
 
 ### 3. Portal Integration
 - **Portal Switcher**: Bottom-right button to navigate to User Portal
@@ -90,6 +98,16 @@ The application requires these tables to be created in Supabase. Run the migrati
 1. `supabase_migration.sql` - Creates core tables
 2. `fix_rls_policies.sql` - Sets up Row Level Security
 3. `fix_status_constraint.sql` - Fixes status enum values
+
+### 4. Prompt Management (`/prompts`)
+- Full CRUD operations for AI prompts
+- Categories: Content Generation, Content Ideation, Content Editing
+- Search by name, description, or tags
+- Duplicate prompts for variations
+- Version history tracking
+- Usage statistics and success rates
+- Settings: temperature, max_tokens, top_p
+- Provider support: Google, OpenAI, Anthropic
 
 ### Key Tables
 ```sql
@@ -125,6 +143,21 @@ clients (
 users (
   id, email, full_name, role,
   created_at, updated_at
+)
+
+-- Prompt Templates
+prompt_templates (
+  id, name, category, description, system_message,
+  examples, variables, settings, provider, model,
+  tags[], is_active, is_default, version, parent_id,
+  usage_count, success_rate, created_by,
+  created_at, updated_at
+)
+
+-- Prompt Usage History
+prompt_usage_history (
+  id, prompt_template_id, used_by, input_data,
+  output_data, feedback, rating, created_at
 )
 ```
 
@@ -221,8 +254,10 @@ npm run type-check
 1. Check Supabase credentials are correct
 2. Ensure `generated_content` table exists - run `supabase_migration.sql`
 3. Fix RLS policies - run `fix_rls_policies.sql`
-4. Fix status constraints - run `fix_status_constraint.sql`
-5. See DATABASE_SETUP.md for complete instructions
+4. Fix status constraints - run `FINAL_FIX_DATABASE.sql`
+5. Run `populate_prompts.sql` to add actual prompts
+6. Status should be 'draft' not 'pending'
+7. See DATABASE_SETUP.md for complete instructions
 
 ### Issue: "Variable already exists" error in Vercel
 **Solution**: Delete duplicate environment variable
@@ -234,6 +269,13 @@ npm run type-check
 3. `fix_status_constraint.sql`
 
 ## Recent Updates (December 2024)
+
+### December 14, 2024
+- **Prompt Management System**: Complete CRUD interface for managing all AI prompts
+- **Approval Flow Fixed**: Removed client dependency, content saves without client selection
+- **User Portal Cleanup**: Removed ALL mock data (Amnon Cohen, mock posts)
+- **Database Improvements**: Made fields optional, fixed status enums
+- **4 LinkedIn Prompts**: Fully populated with actual content from linkedin-prompts.ts
 
 ### Security Fixes
 - Removed all hardcoded API keys from codebase
@@ -257,19 +299,25 @@ npm run type-check
 - **Primary Use Case**: LinkedIn content generation and management for agencies
 
 ## Testing Checklist
-- [ ] Content generation creates 4 unique variations
-- [ ] Posts save to database with 'pending' status
-- [ ] Approval queue shows all pending posts
-- [ ] Approved posts auto-schedule
-- [ ] Portal switcher navigates correctly
-- [ ] Environment variables load properly
-- [ ] No API keys in source code
-- [ ] Build succeeds without TypeScript errors
+- [x] Content generation creates 4 unique variations
+- [x] Posts save to database with 'draft' status
+- [x] Approval queue shows all draft posts
+- [x] Approve button updates to 'admin_approved' status
+- [x] Portal switcher navigates correctly
+- [x] Environment variables load properly
+- [x] No API keys in source code
+- [x] Build succeeds without TypeScript errors
+- [x] Prompt management system fully functional
+- [x] All mock data removed from User Portal
 
 ## Next Steps & Roadmap
-- [ ] Implement client selection in Generate page
+- [x] ~~Implement client selection in Generate page~~ (Removed - not needed)
+- [x] Create prompt management system
 - [ ] Add bulk approval functionality
 - [ ] Create content calendar view
 - [ ] Add analytics dashboard
-- [ ] Implement real LinkedIn publishing
+- [ ] Implement real LinkedIn publishing via API
 - [ ] Add team collaboration features
+- [ ] Create Content Ideation prompts
+- [ ] Create Content Editing prompts
+- [ ] Add prompt performance analytics
