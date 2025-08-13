@@ -13,6 +13,7 @@ import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import EnvTest from './pages/EnvTest';
 import Approval from './pages/Approval';
+import Prompts from './pages/Prompts';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
                   <Route path="/ideation" element={<Ideation />} />
                   <Route path="/generate" element={<Generate />} />
                   <Route path="/approval" element={<Approval />} />
+                  <Route path="/prompts" element={<Prompts />} />
                   <Route path="/schedule" element={<Schedule />} />
                   <Route path="/clients" element={<Clients />} />
                   <Route path="/analytics" element={<Analytics />} />

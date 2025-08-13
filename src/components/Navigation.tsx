@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare } from 'lucide-react';
+import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { generatedContentService } from '../services/database.service';
 
@@ -74,6 +74,11 @@ const Navigation = () => {
               {pendingCount}
             </span>
           )}
+        </NavLink>
+        
+        <NavLink to="/prompts" className={linkClass}>
+          <FileCode className="h-4 w-4" />
+          Prompts
         </NavLink>
         
         <NavLink to="/schedule" className={linkClass}>

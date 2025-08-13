@@ -957,3 +957,215 @@ function getMockAnalytics(): ContentAnalytics[] {
     },
   ];
 }
+
+// =====================================================
+// PROMPT TEMPLATES SERVICE
+// =====================================================
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  category: string;
+  description?: string;
+  system_message: string;
+  examples?: any;
+  variables?: any;
+  settings?: {
+    temperature?: number;
+    max_tokens?: number;
+    top_p?: number;
+    frequency_penalty?: number;
+    presence_penalty?: number;
+  };
+  provider: string;
+  model?: string;
+  tags?: string[];
+  is_active: boolean;
+  is_default?: boolean;
+  version?: number;
+  parent_id?: string;
+  usage_count?: number;
+  success_rate?: number;
+  created_by?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export const promptTemplatesService = {
+  async getAll(): Promise<PromptTemplate[]> {
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('prompt_templates')
+      .select('*')
+      .eq('is_active', true)
+      .order('category', { ascending: true })
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching prompt templates:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async getByCategory(category: string): Promise<PromptTemplate[]> {
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('prompt_templates')
+      .select('*')
+      .eq('category', category)
+      .eq('is_active', true)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching prompts by category:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async getById(id: string): Promise<PromptTemplate | null> {
+    if (!isSupabaseConfigured()) {
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from('prompt_templates')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching prompt:', error);
+      return null;
+    }
+    
+    return data;
+  },
+
+  async create(prompt: Omit<PromptTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<PromptTemplate | null> {
+    if (!isSupabaseConfigured()) {
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from('prompt_templates')
+      .insert([prompt])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating prompt:', error);
+      return null;
+    }
+    
+    return data;
+  },
+
+  async update(id: string, updates: Partial<PromptTemplate>): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      return false;
+    }
+    
+    // If updating, increment version and set parent_id
+    const currentPrompt = await this.getById(id);
+    if (currentPrompt) {
+      updates.version = (currentPrompt.version || 1) + 1;
+      updates.parent_id = id;
+    }
+    
+    const { error } = await supabase
+      .from('prompt_templates')
+      .update(updates)
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error updating prompt:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async delete(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      return false;
+    }
+    
+    // Soft delete by setting is_active to false
+    const { error } = await supabase
+      .from('prompt_templates')
+      .update({ is_active: false })
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting prompt:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async incrementUsage(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      return false;
+    }
+    
+    const { data: current, error: fetchError } = await supabase
+      .from('prompt_templates')
+      .select('usage_count')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError) {
+      console.error('Error fetching prompt for usage update:', fetchError);
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('prompt_templates')
+      .update({ usage_count: (current?.usage_count || 0) + 1 })
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error updating usage count:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async logUsage(promptId: string, input: any, output: any, rating?: number): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('prompt_usage_history')
+      .insert([{
+        prompt_template_id: promptId,
+        input_data: input,
+        output_data: output,
+        rating: rating
+      }]);
+    
+    if (error) {
+      console.error('Error logging prompt usage:', error);
+      return false;
+    }
+    
+    // Also increment the usage counter
+    await this.incrementUsage(promptId);
+    
+    return true;
+  }
+};
