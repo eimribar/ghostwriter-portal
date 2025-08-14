@@ -35,6 +35,17 @@ export const emailService = {
       console.error('Resend client not initialized');
       return;
     }
+    
+    // Note: Resend API calls from browser will fail due to CORS
+    // This needs to be called from a backend/Edge Function
+    console.log('📧 Email notification ready (requires backend to send):', {
+      to: ADMIN_EMAIL,
+      subject: `✨ Your Content Ideas Are Ready! (${data.resultCount} ideas found)`,
+      preview: data.topIdeas.map(i => `${i.title} (${i.score}/10)`).join(', ')
+    });
+    
+    // For now, just log the email that would be sent
+    return;
 
     const topIdeasHtml = data.topIdeas
       .map((idea, index) => `
@@ -106,7 +117,7 @@ export const emailService = {
     `;
 
     try {
-      const response = await resend.emails.send({
+      const response = await resend!.emails.send({
         from: 'Ghostwriter Portal <onboarding@resend.dev>', // Use resend's verified domain for now
         to: [ADMIN_EMAIL],
         subject: `✨ Your Content Ideas Are Ready! (${data.resultCount} ideas found)`,
@@ -124,6 +135,10 @@ export const emailService = {
     if (!this.isConfigured() || !resend) {
       return;
     }
+    
+    // Log for now (CORS prevents browser sending)
+    console.log('📧 Failure notification:', { searchQuery, errorMessage, jobId });
+    return;
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -162,7 +177,7 @@ export const emailService = {
     `;
 
     try {
-      await resend.emails.send({
+      await resend!.emails.send({
         from: 'Ghostwriter Portal <onboarding@resend.dev>',
         to: [ADMIN_EMAIL],
         subject: `⚠️ Search Failed: "${searchQuery}"`,

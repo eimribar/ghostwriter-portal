@@ -15,6 +15,9 @@ import EnvTest from './pages/EnvTest';
 import Approval from './pages/Approval';
 import Prompts from './pages/Prompts';
 
+// Start background processor for search jobs
+import './services/background-processor.service';
+
 function App() {
   return (
     <AuthProvider>
