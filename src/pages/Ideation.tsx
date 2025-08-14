@@ -132,23 +132,21 @@ const Ideation = () => {
   };
 
   const handleGenerateNewsIdeas = async () => {
-    if (!newsSearchOptions.query) {
-      setError('Please enter a search query for news');
-      return;
-    }
+    // Fixed query for testing B2B SaaS, AI, and Marketing trends
+    const testQuery = "top 10 trending topics news B2B SaaS AI marketing enterprise software";
 
     setGenerating(true);
     setError(null);
     
     try {
-      // Generate ideas from trending news
+      // Generate ideas from trending news with fixed query
       const generatedIdeas = await gpt5IdeationService.generateIdeasFromNews(
-        newsSearchOptions.query,
+        testQuery,  // Using fixed query for now
         {
-          count: newsSearchOptions.count,
-          timeframe: newsSearchOptions.timeframe,
-          industry: aiGenerationOptions.industry,
-          targetAudience: aiGenerationOptions.targetAudience
+          count: 10,  // Always get 10 ideas
+          timeframe: 'week',  // Past week of news
+          industry: 'B2B SaaS',
+          targetAudience: 'B2B professionals, SaaS founders, Marketing leaders'
         }
       );
 
@@ -852,48 +850,17 @@ const Ideation = () => {
             )}
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Search Query *</label>
-                <input
-                  type="text"
-                  value={newsSearchOptions.query}
-                  onChange={(e) => setNewsSearchOptions({...newsSearchOptions, query: e.target.value})}
-                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                  placeholder="e.g., AI regulation, cybersecurity, remote work trends..."
-                  disabled={generating}
-                />
-                <p className="text-xs text-zinc-500 mt-1">Enter keywords to search for the latest news and trends</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Time Period</label>
-                  <select
-                    value={newsSearchOptions.timeframe}
-                    onChange={(e) => setNewsSearchOptions({...newsSearchOptions, timeframe: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                    disabled={generating}
-                  >
-                    <option value="today">Past 24 Hours</option>
-                    <option value="week">Past Week</option>
-                    <option value="month">Past Month</option>
-                  </select>
+              <div className="bg-zinc-50 rounded-lg p-4">
+                <h3 className="font-medium text-zinc-900 mb-2">Searching for trending news about:</h3>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-white border border-zinc-200 rounded-full text-sm">B2B SaaS</span>
+                  <span className="px-3 py-1 bg-white border border-zinc-200 rounded-full text-sm">Artificial Intelligence</span>
+                  <span className="px-3 py-1 bg-white border border-zinc-200 rounded-full text-sm">Marketing Technology</span>
+                  <span className="px-3 py-1 bg-white border border-zinc-200 rounded-full text-sm">Enterprise Software</span>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-1">Number of Ideas</label>
-                  <select
-                    value={newsSearchOptions.count}
-                    onChange={(e) => setNewsSearchOptions({...newsSearchOptions, count: parseInt(e.target.value)})}
-                    className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                    disabled={generating}
-                  >
-                    <option value="5">5 Ideas</option>
-                    <option value="10">10 Ideas (Recommended)</option>
-                    <option value="15">15 Ideas</option>
-                    <option value="20">20 Ideas</option>
-                  </select>
-                </div>
+                <p className="text-sm text-zinc-600 mt-3">
+                  We'll find the top 10 trending topics and news from the <strong>past week</strong> related to these areas.
+                </p>
               </div>
 
               <div className="bg-blue-50 rounded-lg p-4">
@@ -933,7 +900,7 @@ const Ideation = () => {
               <button
                 onClick={handleGenerateNewsIdeas}
                 className="flex-1 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
-                disabled={generating || !newsSearchOptions.query}
+                disabled={generating}
               >
                 {generating ? (
                   <>
