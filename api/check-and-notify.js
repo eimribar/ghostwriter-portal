@@ -16,12 +16,12 @@ export default async function handler(req, res) {
     const { Resend } = await import('resend');
     
     const supabase = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.VITE_SUPABASE_ANON_KEY
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
     );
     
-    const resend = new Resend(process.env.VITE_RESEND_API_KEY);
-    const adminEmail = process.env.VITE_ADMIN_EMAIL || 'admin@ghostwriter.com';
+    const resend = new Resend(process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY);
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || 'eimrib@yess.ai';
 
     // Find completed jobs without notifications sent
     const { data: jobs, error } = await supabase

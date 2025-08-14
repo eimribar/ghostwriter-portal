@@ -18,15 +18,16 @@ export default async function handler(req, res) {
   try {
     const { jobId, searchQuery, resultCount, topIdeas, duration } = req.body;
 
-    if (!process.env.VITE_RESEND_API_KEY) {
-      console.error('Missing VITE_RESEND_API_KEY');
+    const resendKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
+    if (!resendKey) {
+      console.error('Missing RESEND_API_KEY');
       return res.status(500).json({ error: 'Email service not configured' });
     }
 
     const { Resend } = await import('resend');
-    const resend = new Resend(process.env.VITE_RESEND_API_KEY);
+    const resend = new Resend(resendKey);
     
-    const adminEmail = process.env.VITE_ADMIN_EMAIL || 'admin@ghostwriter.com';
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || 'eimrib@yess.ai';
 
     const emailHtml = `
       <!DOCTYPE html>

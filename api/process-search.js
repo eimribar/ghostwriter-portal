@@ -30,11 +30,11 @@ export default async function handler(req, res) {
     
     // Initialize clients
     const supabase = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.VITE_SUPABASE_ANON_KEY
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
     );
     
-    const resend = new Resend(process.env.VITE_RESEND_API_KEY);
+    const resend = new Resend(process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY);
 
     // Get the job
     const { data: job, error: jobError } = await supabase
@@ -57,19 +57,20 @@ export default async function handler(req, res) {
       .eq('id', jobId);
 
     // Check for API key
-    if (!process.env.VITE_OPENAI_API_KEY) {
-      throw new Error('Missing VITE_OPENAI_API_KEY environment variable');
+    const openaiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+    if (!openaiKey) {
+      throw new Error('Missing OPENAI_API_KEY environment variable');
     }
     
     // Call GPT-5 API
     console.log('Calling GPT-5 API...');
-    console.log('API Key exists:', !!process.env.VITE_OPENAI_API_KEY);
-    console.log('API Key prefix:', process.env.VITE_OPENAI_API_KEY?.substring(0, 20));
+    console.log('API Key exists:', !!openaiKey);
+    console.log('API Key prefix:', openaiKey?.substring(0, 20));
     
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.VITE_OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${openaiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -240,7 +241,7 @@ export default async function handler(req, res) {
 
       await resend.emails.send({
         from: 'Ghostwriter Portal <onboarding@resend.dev>',
-        to: [process.env.VITE_ADMIN_EMAIL],
+        to: [process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || 'eimrib@yess.ai'],
         subject: `✨ Your Content Ideas Are Ready! (${ideas.length} ideas found)`,
         html: emailHtml
       });
@@ -268,8 +269,8 @@ export default async function handler(req, res) {
     try {
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
-        process.env.VITE_SUPABASE_URL,
-        process.env.VITE_SUPABASE_ANON_KEY
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
       );
       
       await supabase
