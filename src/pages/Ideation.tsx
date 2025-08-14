@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe } from 'lucide-react';
+import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe, Mail, CheckCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
 import { gpt5ResponsesService } from '../services/gpt5-responses.service';
+import { searchJobsService, type SearchJob } from '../services/search-jobs.service';
 
 // Using ContentIdeaDB from database service
 interface IdeaWithUI extends ContentIdeaDB {
@@ -18,6 +19,8 @@ const Ideation = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeJobs, setActiveJobs] = useState<SearchJob[]>([]);
+  const [showJobsPanel, setShowJobsPanel] = useState(false);
   
 
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -38,7 +41,8 @@ const Ideation = () => {
   const [newsSearchOptions, setNewsSearchOptions] = useState({
     query: '',
     timeframe: 'week' as 'today' | 'week' | 'month',
-    count: 10
+    count: 10,
+    topics: ['B2B SaaS', 'AI', 'Marketing'] as string[]
   });
 
   // New idea form state
@@ -76,6 +80,14 @@ const Ideation = () => {
     console.log('🔐 === End Configuration Check ===');
     
     loadIdeas();
+    loadActiveJobs();
+    
+    // Poll for active jobs every 30 seconds
+    const interval = setInterval(() => {
+      loadActiveJobs();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadIdeas = async () => {
@@ -91,6 +103,15 @@ const Ideation = () => {
       setError('Failed to load content ideas');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadActiveJobs = async () => {
+    try {
+      const jobs = await searchJobsService.getPendingJobs();
+      setActiveJobs(jobs);
+    } catch (err) {
+      console.error('Error loading active jobs:', err);
     }
   };
 
@@ -141,7 +162,7 @@ const Ideation = () => {
   };
 
   const handleGenerateNewsIdeas = async () => {
-    console.log('🚀 === NEWS GENERATION WITH REAL WEB SEARCH ===');
+    console.log('🚀 === STARTING BACKGROUND NEWS SEARCH ===');
     
     // Your exact query for finding real news
     const searchQuery = "find me the top 10 trending topics (news) with context related to b2b saas, ai and marketing. actual news from the past week";
@@ -151,64 +172,61 @@ const Ideation = () => {
     setError(null);
     
     try {
-      console.log('⏳ Calling GPT-5 Responses API with Web Search...');
-      console.log('🌐 This will take 2-5 minutes for real web search...');
-      
-      // Generate ideas from REAL trending news using GPT-5 Responses API
-      const generatedIdeas = await gpt5ResponsesService.searchAndGenerateIdeas(
-        searchQuery,
-        {
-          count: 10,
-          timeframe: 'week',
-          industry: 'B2B SaaS',
-          targetAudience: 'B2B professionals, SaaS founders, Marketing leaders'
-        }
-      );
-      
-      console.log('💡 Ideas Generated:', generatedIdeas.length);
-      console.log('📊 Ideas Detail:', JSON.stringify(generatedIdeas, null, 2));
-
-      // Convert and save to database
-      const ideaPromises = generatedIdeas.map(async (genIdea) => {
-        return contentIdeasService.create({
-          source: 'trending',
-          title: genIdea.title,
-          description: genIdea.description,
-          hook: genIdea.hook,
-          key_points: genIdea.keyPoints,
-          target_audience: genIdea.targetAudience,
-          content_format: genIdea.contentFormat,
-          category: genIdea.category,
-          priority: genIdea.engagementScore >= 9 ? 'high' : 'medium',
-          status: 'ready',
-          score: genIdea.engagementScore,
-          ai_model: 'gpt-5',
-          ai_reasoning_effort: 'high',
-          linkedin_style: genIdea.linkedInStyle,
-          hashtags: genIdea.tags,
-          trend_reference: `News search: ${newsSearchOptions.query}`
-        });
+      // Create a background search job
+      const searchJob = await searchJobsService.create(searchQuery, {
+        topics: newsSearchOptions.topics || ['B2B SaaS', 'AI', 'Marketing'],
+        industry: 'B2B SaaS',
+        targetAudience: 'B2B professionals, SaaS founders, Marketing leaders',
+        count: 10,
+        mode: 'news_search'
       });
 
-      console.log('💾 Saving to database...');
-      const savedIdeas = await Promise.all(ideaPromises);
-      const validIdeas = savedIdeas.filter(Boolean) as IdeaWithUI[];
+      if (!searchJob) {
+        throw new Error('Failed to create search job');
+      }
+
+      console.log('✅ Search job created:', searchJob.id);
       
-      console.log('✅ Ideas saved:', validIdeas.length);
-      
-      // Reload all ideas from database to ensure UI is in sync
-      await loadIdeas();
+      // Trigger the Edge Function to process the search
+      // Note: In production, this would be triggered automatically by database webhook
+      // For now, we'll call it directly
+      if (import.meta.env.VITE_ENV === 'production') {
+        fetch('/.netlify/functions/trigger-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId: searchJob.id })
+        }).catch(() => console.log('Background trigger sent'));
+      }
+
+      // Show success message
       setShowNewsModal(false);
       setNewsSearchOptions(prev => ({ ...prev, query: '' }));
       
-    } catch (err: any) {
+      // Show notification that search has started
+      setError(null);
+      const successMessage = document.createElement('div');
+      successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 z-50';
+      successMessage.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div>
+          <div class="font-semibold">Search Started!</div>
+          <div class="text-sm opacity-90">Check your email in ~5 minutes for results</div>
+        </div>
+      `;
+      document.body.appendChild(successMessage);
+      
+      // Remove notification after 5 seconds
+      setTimeout(() => {
+        successMessage.remove();
+      }, 5000);
+      
+    } catch (err) {
       console.error('❌ ERROR:', err);
-      console.error('Error message:', err.message);
-      console.error('Stack trace:', err.stack);
-      setError('Failed to generate news-based ideas. Please check console for details.');
+      setError('Failed to start background search. Please try again.');
     } finally {
       setGenerating(false);
-      console.log('✅ === NEWS GENERATION COMPLETE ===');
     }
   };
 
@@ -369,8 +387,58 @@ const Ideation = () => {
               <Plus className="h-4 w-4" />
               New Idea
             </button>
+            
+            {/* Active Jobs Indicator */}
+            {activeJobs.length > 0 && (
+              <button
+                onClick={() => setShowJobsPanel(!showJobsPanel)}
+                className="relative flex items-center gap-2 px-4 py-2 bg-purple-100 border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+              >
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {activeJobs.length} search{activeJobs.length > 1 ? 'es' : ''} running
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-purple-500 rounded-full animate-pulse" />
+              </button>
+            )}
           </div>
         </div>
+        
+        {/* Active Jobs Panel */}
+        {showJobsPanel && activeJobs.length > 0 && (
+          <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-purple-900">Active Searches</h3>
+              <button
+                onClick={() => setShowJobsPanel(false)}
+                className="text-purple-600 hover:text-purple-800"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2">
+              {activeJobs.map(job => (
+                <div key={job.id} className="flex items-center justify-between p-3 bg-white rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">
+                        {job.search_query.length > 80 
+                          ? job.search_query.substring(0, 80) + '...'
+                          : job.search_query}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Started {new Date(job.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-purple-600">
+                    <Mail className="h-3 w-3" />
+                    Email notification pending
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-4 mb-6">
@@ -958,13 +1026,13 @@ const Ideation = () => {
               >
                 {generating ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Searching News...
+                    <CheckCircle className="h-4 w-4" />
+                    Starting Search...
                   </>
                 ) : (
                   <>
                     <Newspaper className="h-4 w-4" />
-                    Generate from News
+                    Start Background Search
                   </>
                 )}
               </button>
