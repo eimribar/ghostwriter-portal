@@ -867,9 +867,9 @@ Industry context: ${industry}`;
       console.log('💡 Parsed Ideas:', JSON.stringify(parsedIdeas, null, 2));
       
       return parsedIdeas;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error generating news-based ideas:', error);
-      console.error('Stack trace:', error.stack);
+      console.error('Stack trace:', error?.stack);
       console.log('⚠️ Falling back to mock data due to error');
       return this.generateMockNewsIdeas(searchQuery, count, timeframe);
     }
