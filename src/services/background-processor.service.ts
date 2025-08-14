@@ -60,9 +60,21 @@ class BackgroundProcessor {
         // Call Vercel API endpoint to process the job
         console.log('📡 Calling Vercel API to process job...');
         
-        const apiUrl = window.location.hostname === 'localhost' 
-          ? 'http://localhost:3000/api/process-search'
-          : '/api/process-search';
+        // Determine the correct API URL based on the current location
+        let apiUrl = '/api/process-search';
+        
+        if (window.location.hostname === 'localhost') {
+          // In local development, use the full URL
+          apiUrl = 'http://localhost:5173/api/process-search';
+        } else if (window.location.hostname.includes('vercel.app')) {
+          // In production on Vercel, use relative path
+          apiUrl = '/api/process-search';
+        } else {
+          // Fallback to production URL
+          apiUrl = 'https://ghostwriter-portal.vercel.app/api/process-search';
+        }
+        
+        console.log(`📡 Using API URL: ${apiUrl}`);
         
         const response = await fetch(apiUrl, {
           method: 'POST',

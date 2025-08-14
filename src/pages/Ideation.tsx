@@ -4,6 +4,7 @@ import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
 import { gpt5ResponsesService } from '../services/gpt5-responses.service';
 import { searchJobsService, type SearchJob } from '../services/search-jobs.service';
+import { supabase } from '../lib/supabase';
 
 // Using ContentIdeaDB from database service
 interface IdeaWithUI extends ContentIdeaDB {
@@ -162,6 +163,28 @@ const Ideation = () => {
     }
   };
 
+  // Manual function to check and send pending email notifications
+  const checkAndSendPendingEmails = async () => {
+    console.log('📧 Checking for pending email notifications...');
+    try {
+      const response = await fetch('/api/check-and-notify', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Email check complete: ${result.notificationsSent} emails sent`);
+        if (result.notificationsSent > 0) {
+          // Reload active jobs to update status
+          await loadActiveJobs();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check pending emails:', err);
+    }
+  };
+
   const handleGenerateNewsIdeas = async () => {
     console.log('🚀 === STARTING BACKGROUND NEWS SEARCH ===');
     
@@ -209,6 +232,44 @@ const Ideation = () => {
         setShowConfirmation(false);
         setNewsSearchOptions(prev => ({ ...prev, query: '' }));
       }, 5000);
+      
+      // Also trigger email notification after a delay (backup method)
+      setTimeout(async () => {
+        try {
+          // Check if job completed and send email
+          const { data: updatedJob } = await supabase
+            .from('search_jobs')
+            .select('*')
+            .eq('id', searchJob.id)
+            .single();
+          
+          if (updatedJob && updatedJob.status === 'completed' && !updatedJob.notification_sent) {
+            // Send email via API
+            const emailResponse = await fetch('/api/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jobId: searchJob.id,
+                searchQuery: searchQuery,
+                resultCount: updatedJob.result_count || 10,
+                duration: '2-5 minutes'
+              })
+            });
+            
+            if (emailResponse.ok) {
+              // Mark notification as sent
+              await supabase
+                .from('search_jobs')
+                .update({ notification_sent: true })
+                .eq('id', searchJob.id);
+              
+              console.log('📧 Email notification sent successfully');
+            }
+          }
+        } catch (err) {
+          console.log('Email notification will be sent by background processor');
+        }
+      }, 300000); // Check after 5 minutes
       
     } catch (err) {
       console.error('❌ ERROR:', err);
@@ -387,6 +448,16 @@ const Ideation = () => {
                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-purple-500 rounded-full animate-pulse" />
               </button>
             )}
+            
+            {/* Manual Email Check Button */}
+            <button
+              onClick={checkAndSendPendingEmails}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+              title="Check for completed searches and send email notifications"
+            >
+              <Mail className="h-4 w-4" />
+              Check Emails
+            </button>
           </div>
         </div>
         
