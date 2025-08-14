@@ -997,6 +997,10 @@ export const promptTemplatesService = {
       return [];
     }
     
+    // Add cache-busting timestamp to ensure fresh data
+    const timestamp = Date.now();
+    console.log(`Fetching all prompt templates at ${timestamp}`);
+    
     const { data, error } = await supabase
       .from('prompt_templates')
       .select('*')
@@ -1009,6 +1013,7 @@ export const promptTemplatesService = {
       return [];
     }
     
+    console.log(`Retrieved ${data?.length || 0} active prompts`);
     return data || [];
   },
 

@@ -36,8 +36,15 @@ const Prompts = () => {
   const loadPrompts = async () => {
     setLoading(true);
     try {
+      console.log('Loading prompts from database...');
       const data = await promptTemplatesService.getAll();
-      setPrompts(data);
+      console.log('Loaded prompts:', data.length, 'prompts');
+      // Add a timestamp to force re-render
+      const promptsWithTimestamp = data.map(p => ({
+        ...p,
+        _loadedAt: Date.now()
+      }));
+      setPrompts(promptsWithTimestamp);
     } catch (error) {
       console.error('Error loading prompts:', error);
     } finally {
@@ -85,10 +92,36 @@ const Prompts = () => {
   const handleSave = async () => {
     try {
       if (isEditing && selectedPrompt) {
+        console.log('Updating prompt with ID:', selectedPrompt.id);
+        console.log('Form data being sent:', formData);
+        
         const success = await promptTemplatesService.update(selectedPrompt.id, formData);
         if (success) {
           console.log('✅ Prompt updated successfully');
           alert('Prompt updated successfully!');
+          
+          // Force reload prompts and clear cache
+          setPrompts([]); // Clear current prompts
+          await loadPrompts(); // Reload from database
+          
+          // Close modal and reset form
+          setShowCreateModal(false);
+          setSelectedPrompt(null);
+          setFormData({
+            name: '',
+            category: 'Content Generation',
+            description: '',
+            system_message: '',
+            provider: 'google',
+            model: 'gemini-2.0-flash-exp',
+            tags: [],
+            is_active: true,
+            settings: {
+              temperature: 1.5,
+              max_tokens: 1048576,
+              top_p: 0.95
+            }
+          });
         } else {
           alert('Failed to update prompt. Please try again.');
           return;
@@ -98,14 +131,14 @@ const Prompts = () => {
         if (result) {
           console.log('✅ Prompt created successfully');
           alert('Prompt created successfully!');
+          await loadPrompts();
+          setShowCreateModal(false);
+          setSelectedPrompt(null);
         } else {
           alert('Failed to create prompt. Please try again.');
           return;
         }
       }
-      await loadPrompts();
-      setShowCreateModal(false);
-      setSelectedPrompt(null);
     } catch (error) {
       console.error('Error saving prompt:', error);
       alert('An error occurred while saving the prompt.');
@@ -287,7 +320,11 @@ const Prompts = () => {
               {/* Actions */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setSelectedPrompt(prompt)}
+                  onClick={() => {
+                    // Find the latest version of this prompt from the state
+                    const latestPrompt = prompts.find(p => p.id === prompt.id);
+                    setSelectedPrompt(latestPrompt || prompt);
+                  }}
                   className="flex-1 px-3 py-1.5 bg-zinc-100 text-zinc-700 rounded hover:bg-zinc-200 transition-colors text-sm"
                 >
                   <Eye className="w-3 h-3 inline mr-1" />
