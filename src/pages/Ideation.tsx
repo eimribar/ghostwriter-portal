@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle } from 'lucide-react';
+import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
 import { gpt5IdeationService } from '../services/gpt5-ideation.service';
@@ -27,12 +27,18 @@ const Ideation = () => {
   const [showNewIdeaModal, setShowNewIdeaModal] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<IdeaWithUI | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showNewsModal, setShowNewsModal] = useState(false);
   const [aiGenerationOptions, setAiGenerationOptions] = useState({
     count: 5,
-    mode: 'comprehensive' as 'comprehensive' | 'quick' | 'trend_focused',
+    mode: 'comprehensive' as 'comprehensive' | 'quick' | 'trend_focused' | 'news_focused',
     industry: 'technology',
     targetAudience: 'B2B professionals',
     topic: ''
+  });
+  const [newsSearchOptions, setNewsSearchOptions] = useState({
+    query: '',
+    timeframe: 'week' as 'today' | 'week' | 'month',
+    count: 10
   });
 
   // New idea form state
@@ -122,6 +128,64 @@ const Ideation = () => {
     } catch (err) {
       console.error('Error creating idea:', err);
       setError('Failed to create idea');
+    }
+  };
+
+  const handleGenerateNewsIdeas = async () => {
+    if (!newsSearchOptions.query) {
+      setError('Please enter a search query for news');
+      return;
+    }
+
+    setGenerating(true);
+    setError(null);
+    
+    try {
+      // Generate ideas from trending news
+      const generatedIdeas = await gpt5IdeationService.generateIdeasFromNews(
+        newsSearchOptions.query,
+        {
+          count: newsSearchOptions.count,
+          timeframe: newsSearchOptions.timeframe,
+          industry: aiGenerationOptions.industry,
+          targetAudience: aiGenerationOptions.targetAudience
+        }
+      );
+
+      // Convert and save to database
+      const ideaPromises = generatedIdeas.map(async (genIdea) => {
+        return contentIdeasService.create({
+          source: 'trending',
+          title: genIdea.title,
+          description: genIdea.description,
+          hook: genIdea.hook,
+          key_points: genIdea.keyPoints,
+          target_audience: genIdea.targetAudience,
+          content_format: genIdea.contentFormat,
+          category: genIdea.category,
+          priority: genIdea.engagementScore >= 9 ? 'high' : 'medium',
+          status: 'ready',
+          score: genIdea.engagementScore,
+          ai_model: 'gpt-5',
+          ai_reasoning_effort: 'high',
+          linkedin_style: genIdea.linkedInStyle,
+          hashtags: genIdea.tags,
+          trend_reference: `News search: ${newsSearchOptions.query}`
+        });
+      });
+
+      const savedIdeas = await Promise.all(ideaPromises);
+      const validIdeas = savedIdeas.filter(Boolean) as IdeaWithUI[];
+      
+      setIdeas([...validIdeas, ...ideas]);
+      setShowNewsModal(false);
+      setNewsSearchOptions(prev => ({ ...prev, query: '' }));
+      
+    } catch (err) {
+      console.error('Error generating news-based ideas:', err);
+      setError('Failed to generate news-based ideas. Please try again.');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -222,6 +286,18 @@ const Ideation = () => {
             <p className="text-zinc-600 mt-1">Discover, create, and manage content ideas</p>
           </div>
           <div className="flex gap-2">
+            <button 
+              onClick={() => setShowNewsModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+              disabled={generating}
+            >
+              {generating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Newspaper className="h-4 w-4" />
+              )}
+              News & Trends
+            </button>
             <button 
               onClick={() => setShowAIModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
@@ -661,6 +737,7 @@ const Ideation = () => {
                     <option value="comprehensive">Comprehensive (High Quality)</option>
                     <option value="quick">Quick (Fast Generation)</option>
                     <option value="trend_focused">Trend Focused</option>
+                    <option value="news_focused">News & Breaking Topics</option>
                   </select>
                 </div>
 
@@ -742,6 +819,131 @@ const Ideation = () => {
                   <>
                     <Sparkles className="h-4 w-4" />
                     Generate Ideas
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* News Search Modal */}
+      {showNewsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Globe className="h-6 w-6 text-zinc-900" />
+                <h2 className="text-xl font-bold text-zinc-900">Generate Ideas from Trending News</h2>
+              </div>
+              <button 
+                onClick={() => setShowNewsModal(false)}
+                className="text-zinc-400 hover:text-zinc-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <span className="text-sm text-red-600">{error}</span>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Search Query *</label>
+                <input
+                  type="text"
+                  value={newsSearchOptions.query}
+                  onChange={(e) => setNewsSearchOptions({...newsSearchOptions, query: e.target.value})}
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  placeholder="e.g., AI regulation, cybersecurity, remote work trends..."
+                  disabled={generating}
+                />
+                <p className="text-xs text-zinc-500 mt-1">Enter keywords to search for the latest news and trends</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Time Period</label>
+                  <select
+                    value={newsSearchOptions.timeframe}
+                    onChange={(e) => setNewsSearchOptions({...newsSearchOptions, timeframe: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                    disabled={generating}
+                  >
+                    <option value="today">Past 24 Hours</option>
+                    <option value="week">Past Week</option>
+                    <option value="month">Past Month</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Number of Ideas</label>
+                  <select
+                    value={newsSearchOptions.count}
+                    onChange={(e) => setNewsSearchOptions({...newsSearchOptions, count: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                    disabled={generating}
+                  >
+                    <option value="5">5 Ideas</option>
+                    <option value="10">10 Ideas (Recommended)</option>
+                    <option value="15">15 Ideas</option>
+                    <option value="20">20 Ideas</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">How it works</p>
+                    <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                      <li>• Searches for the hottest news about your topic</li>
+                      <li>• Analyzes trending discussions and breaking stories</li>
+                      <li>• Generates timely content ideas with news hooks</li>
+                      <li>• Perfect for newsjacking and real-time commentary</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 rounded-lg p-3">
+                <p className="text-xs text-amber-800">
+                  <strong>💡 Pro Tip:</strong> News-based content gets 3x more engagement when posted within 24-48 hours of breaking news. 
+                  Act fast on these ideas!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowNewsModal(false);
+                  setError(null);
+                }}
+                className="flex-1 px-4 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+                disabled={generating}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateNewsIdeas}
+                className="flex-1 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
+                disabled={generating || !newsSearchOptions.query}
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Searching News...
+                  </>
+                ) : (
+                  <>
+                    <Newspaper className="h-4 w-4" />
+                    Generate from News
                   </>
                 )}
               </button>

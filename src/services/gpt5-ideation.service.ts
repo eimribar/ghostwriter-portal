@@ -36,6 +36,36 @@ export interface ContentIdeaGenerated {
 const ideationTools = [
   {
     type: 'function',
+    name: 'search_trending_news',
+    description: 'Searches for trending news and hot topics from the web',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search keywords or topic to find news about' },
+        timeframe: { 
+          type: 'string', 
+          enum: ['today', 'week', 'month'],
+          description: 'Time period for news (past 24h, week, or month)'
+        },
+        limit: { 
+          type: 'number', 
+          description: 'Number of news items to return',
+          default: 10
+        },
+        type: {
+          type: 'string',
+          enum: ['news', 'trending', 'all'],
+          description: 'Type of content to search for',
+          default: 'all'
+        }
+      },
+      required: ['query'],
+      additionalProperties: false
+    },
+    strict: true
+  },
+  {
+    type: 'function',
     name: 'get_trending_topics',
     description: 'Fetches current trending topics on LinkedIn',
     parameters: {
@@ -189,7 +219,38 @@ Keep responses concise and actionable. Each idea should include:
 
   trend_focused: `Analyze current LinkedIn trends and generate content ideas based on what's gaining traction.
 Focus on emerging topics, contrarian takes, and timely discussions.
-Prioritize ideas that can ride existing momentum while adding unique perspective.`
+Prioritize ideas that can ride existing momentum while adding unique perspective.`,
+
+  news_focused: `You are a content strategist specializing in newsjacking and real-time marketing.
+Your goal is to transform breaking news and trending topics into engaging LinkedIn content ideas.
+
+<approach>
+1. Analyze news for LinkedIn relevance
+2. Identify unique angles and hot takes
+3. Connect news to professional insights
+4. Create timely, shareable content ideas
+5. Prioritize freshness and relevance
+</approach>
+
+<content_angles>
+- Expert commentary on breaking news
+- Contrarian perspectives on trends
+- Practical implications for professionals
+- Industry impact analysis
+- Lessons learned from current events
+- Predictions based on news patterns
+</content_angles>
+
+<output_format>
+For each news-based idea, provide:
+- Compelling hook tied to the news
+- Your unique angle/perspective
+- 3-5 key discussion points
+- Target audience segment
+- Urgency level (post within X hours/days)
+- Expected engagement (1-10)
+- News source reference
+</output_format>`
 };
 
 // Mock tool implementations (these would call real APIs in production)
@@ -197,6 +258,19 @@ async function executeTool(toolName: string, args: any): Promise<any> {
   console.log(`Executing tool: ${toolName} with args:`, args);
   
   switch (toolName) {
+    case 'search_trending_news':
+      return {
+        articles: generateMockNewsArticles(args.query, args.limit || 10, args.timeframe || 'week'),
+        trending_topics: extractTrendingTopics(args.query),
+        content_angles: [
+          'Expert commentary on implications',
+          'Contrarian perspective',
+          'Practical application for professionals',
+          'Industry impact analysis',
+          'Future predictions based on this trend'
+        ]
+      };
+    
     case 'get_trending_topics':
       return {
         trends: [
@@ -267,6 +341,93 @@ async function executeTool(toolName: string, args: any): Promise<any> {
   }
 }
 
+// Generate mock news articles for testing
+function generateMockNewsArticles(query: string, limit: number, timeframe: string): any[] {
+  const sources = ['TechCrunch', 'Forbes', 'Bloomberg', 'Reuters', 'The Verge', 'WSJ', 'Financial Times'];
+  const articles = [];
+  
+  // Calculate date range based on timeframe
+  const now = new Date();
+  const daysAgo = timeframe === 'today' ? 1 : timeframe === 'week' ? 7 : 30;
+  
+  for (let i = 0; i < limit; i++) {
+    const hoursAgo = Math.floor(Math.random() * (daysAgo * 24));
+    const articleDate = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+    
+    articles.push({
+      title: generateNewsTitle(query, i),
+      source: sources[Math.floor(Math.random() * sources.length)],
+      date: articleDate.toISOString().split('T')[0],
+      time_ago: formatTimeAgo(hoursAgo),
+      summary: `Breaking developments in ${query} are reshaping the industry landscape. Experts predict significant impacts on businesses and professionals worldwide.`,
+      url: `https://example.com/news/${query.toLowerCase().replace(/\s+/g, '-')}-${i}`,
+      relevance_score: (Math.random() * 3 + 7).toFixed(1), // 7.0-10.0
+      engagement_potential: Math.floor(Math.random() * 3) + 8, // 8-10
+      key_points: [
+        `Major shift in ${query} landscape`,
+        'Industry leaders respond to changes',
+        'New opportunities emerging for professionals',
+        'Regulatory implications being evaluated'
+      ]
+    });
+  }
+  
+  return articles.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+// Generate realistic news titles
+function generateNewsTitle(query: string, index: number): string {
+  const templates = [
+    `Breaking: Major ${query} Development Shakes Industry`,
+    `${query} Reaches New Milestone, Experts Weigh In`,
+    `How ${query} is Transforming Business in 2024`,
+    `Exclusive: Inside the ${query} Revolution`,
+    `${query} Disruption: What It Means for Your Career`,
+    `New Study Reveals Surprising ${query} Trends`,
+    `Industry Alert: ${query} Changes Everything`,
+    `The Unexpected Rise of ${query} in Enterprise`,
+    `${query} 2024: Predictions vs Reality`,
+    `Why ${query} is the Most Important Trend Right Now`
+  ];
+  
+  return templates[index % templates.length];
+}
+
+// Format time ago for display
+function formatTimeAgo(hours: number): string {
+  if (hours < 1) return 'Just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return '1 day ago';
+  if (days < 7) return `${days} days ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks === 1) return '1 week ago';
+  return `${weeks} weeks ago`;
+}
+
+// Extract trending topics from query
+function extractTrendingTopics(query: string): string[] {
+  const baseTopics = [
+    `${query} adoption`,
+    `${query} best practices`,
+    `${query} challenges`,
+    `${query} opportunities`,
+    `${query} innovation`
+  ];
+  
+  const trendingModifiers = [
+    'in 2024',
+    'for enterprises',
+    'disruption',
+    'transformation',
+    'future trends'
+  ];
+  
+  return baseTopics.slice(0, 5).map((topic, i) => 
+    `${topic} ${trendingModifiers[i]}`
+  );
+}
+
 function generateHookForStyle(topic: string, style: string): string {
   const templates = {
     provocative: [
@@ -320,10 +481,11 @@ export class GPT5IdeationService {
     topic: string,
     options: {
       count?: number;
-      mode?: 'comprehensive' | 'quick' | 'trend_focused';
+      mode?: 'comprehensive' | 'quick' | 'trend_focused' | 'news_focused';
       industry?: string;
       targetAudience?: string;
       useTools?: boolean;
+      timeframe?: 'today' | 'week' | 'month';
     } = {}
   ): Promise<ContentIdeaGenerated[]> {
     if (!this.isConfigured()) {
@@ -599,6 +761,109 @@ For each idea provide:
       });
     }
     
+    return ideas;
+  }
+
+  // Generate ideas from trending news
+  async generateIdeasFromNews(
+    searchQuery: string,
+    options: {
+      count?: number;
+      timeframe?: 'today' | 'week' | 'month';
+      industry?: string;
+      targetAudience?: string;
+    } = {}
+  ): Promise<ContentIdeaGenerated[]> {
+    const {
+      count = 10,
+      timeframe = 'week',
+      industry = 'technology',
+      targetAudience = 'B2B professionals'
+    } = options;
+
+    // For mock implementation
+    if (!this.isConfigured()) {
+      console.log('Generating mock news-based ideas for:', searchQuery);
+      return this.generateMockNewsIdeas(searchQuery, count, timeframe);
+    }
+
+    try {
+      // Use news-focused prompt and search tool
+      const systemPrompt = systemPrompts.news_focused;
+      const userPrompt = `Search for the latest trending news about "${searchQuery}" from the past ${timeframe}.
+Generate ${count} LinkedIn content ideas based on the hottest and most relevant news.
+
+Focus on:
+- Breaking news and recent developments
+- Industry impact and implications
+- Professional insights and commentary
+- Timely angles that need immediate attention
+
+Target audience: ${targetAudience}
+Industry context: ${industry}`;
+
+      // Include the search_trending_news tool
+      const tools = [{
+        type: 'function',
+        name: 'search_trending_news',
+        description: 'Searches for trending news and hot topics from the web',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: { type: 'string' },
+            timeframe: { type: 'string', enum: ['today', 'week', 'month'] },
+            limit: { type: 'number' },
+            type: { type: 'string', enum: ['news', 'trending', 'all'] }
+          },
+          required: ['query']
+        }
+      }];
+
+      const response = await this.callOpenAI(systemPrompt, userPrompt, tools);
+      return this.parseIdeasFromResponse(response);
+    } catch (error) {
+      console.error('Error generating news-based ideas:', error);
+      return this.generateMockNewsIdeas(searchQuery, count, timeframe);
+    }
+  }
+
+  // Generate mock news-based ideas
+  private generateMockNewsIdeas(
+    query: string,
+    count: number,
+    timeframe: string
+  ): ContentIdeaGenerated[] {
+    const newsArticles = generateMockNewsArticles(query, count, timeframe);
+    const ideas: ContentIdeaGenerated[] = [];
+
+    for (const article of newsArticles) {
+      ideas.push({
+        title: `My Take: ${article.title}`,
+        description: `Share expert commentary on the breaking news about ${query}. ${article.summary}`,
+        hook: `BREAKING: ${article.title.split(':')[1] || article.title} - Here's what it really means for you...`,
+        category: 'News Commentary',
+        targetAudience: 'Industry professionals following ' + query,
+        contentFormat: 'thought-leadership',
+        keyPoints: [
+          'Immediate implications for the industry',
+          'What this means for professionals',
+          'Hidden opportunities in this development',
+          'Potential risks to watch out for',
+          'Action steps to take right now'
+        ],
+        engagementScore: parseFloat(article.engagement_potential),
+        tags: [
+          'breaking-news',
+          query.toLowerCase().replace(/\s+/g, ''),
+          'industry-insights',
+          'trending',
+          article.source.toLowerCase()
+        ],
+        source: 'trending',
+        linkedInStyle: 'news-commentary'
+      });
+    }
+
     return ideas;
   }
 
