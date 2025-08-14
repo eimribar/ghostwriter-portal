@@ -1083,18 +1083,33 @@ export const promptTemplatesService = {
       return false;
     }
     
-    // Remove id and any other read-only fields to prevent conflicts
-    const { id: _, created_at, updated_at, ...updateData } = updates as any;
+    // Create a clean update object with only the fields we want to update
+    const cleanUpdate: any = {
+      name: updates.name,
+      category: updates.category,
+      description: updates.description,
+      system_message: updates.system_message,
+      provider: updates.provider,
+      model: updates.model,
+      tags: updates.tags,
+      settings: updates.settings,
+      is_active: updates.is_active !== undefined ? updates.is_active : true,
+      updated_at: new Date().toISOString()
+    };
     
-    // Add updated_at timestamp
-    updateData.updated_at = new Date().toISOString();
+    // Remove undefined values
+    Object.keys(cleanUpdate).forEach(key => {
+      if (cleanUpdate[key] === undefined) {
+        delete cleanUpdate[key];
+      }
+    });
     
     console.log('🔄 Updating prompt template:', id);
-    console.log('📝 Update data:', JSON.stringify(updateData, null, 2));
+    console.log('📝 Clean update data:', JSON.stringify(cleanUpdate, null, 2));
     
     const { data, error } = await supabase
       .from('prompt_templates')
-      .update(updateData)
+      .update(cleanUpdate)
       .eq('id', id)
       .select();
     
@@ -1105,8 +1120,12 @@ export const promptTemplatesService = {
       console.error('Error details:', error.details);
       console.error('Error hint:', error.hint);
       
-      // Show more detailed error to user
-      alert(`Database error: ${error.message || 'Unknown error'}\n\nDetails: ${error.details || 'No details'}\n\nHint: ${error.hint || 'No hint'}`);
+      // If it's a schema cache error, provide specific instructions
+      if (error.message?.includes('schema cache') || error.message?.includes('_jsonschema')) {
+        alert('Database schema error detected!\n\nPlease run the fix_prompt_templates_schema.sql script in Supabase SQL Editor to fix this issue.\n\nThis will recreate the prompt_templates table with the correct structure.');
+      } else {
+        alert(`Database error: ${error.message || 'Unknown error'}\n\nDetails: ${error.details || 'No details'}\n\nHint: ${error.hint || 'No hint'}`);
+      }
       return false;
     }
     

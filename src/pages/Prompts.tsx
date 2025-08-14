@@ -95,16 +95,8 @@ const Prompts = () => {
         console.log('🔧 Updating prompt with ID:', selectedPrompt.id);
         console.log('📋 Form data being sent:', JSON.stringify(formData, null, 2));
         
-        // Ensure all required fields are present
-        const updateData = {
-          ...selectedPrompt,  // Start with existing data
-          ...formData,        // Override with form changes
-          id: selectedPrompt.id,  // Ensure ID is preserved
-        };
-        
-        console.log('📦 Complete update data:', JSON.stringify(updateData, null, 2));
-        
-        const success = await promptTemplatesService.update(selectedPrompt.id, updateData);
+        // Send only the form data, not the merged object
+        const success = await promptTemplatesService.update(selectedPrompt.id, formData);
         if (success) {
           console.log('✅ Prompt updated successfully');
           alert('Prompt updated successfully!');
