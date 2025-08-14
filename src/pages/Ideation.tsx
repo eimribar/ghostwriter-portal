@@ -68,6 +68,15 @@ const Ideation = () => {
 
   // Load ideas from database on mount
   useEffect(() => {
+    console.log('🔐 === GPT-5 Configuration Check ===');
+    console.log('- Service configured:', gpt5IdeationService.isConfigured());
+    console.log('- API Key exists:', !!import.meta.env.VITE_OPENAI_API_KEY);
+    console.log('- API Key (first 20 chars):', import.meta.env.VITE_OPENAI_API_KEY?.substring(0, 20) + '...');
+    console.log('- Model:', import.meta.env.VITE_GPT5_MODEL || 'gpt-5 (default)');
+    console.log('- Reasoning effort:', import.meta.env.VITE_GPT5_REASONING_EFFORT || 'medium (default)');
+    console.log('- Verbosity:', import.meta.env.VITE_GPT5_VERBOSITY || 'high (default)');
+    console.log('🔐 === End Configuration Check ===');
+    
     loadIdeas();
   }, []);
 
@@ -132,13 +141,18 @@ const Ideation = () => {
   };
 
   const handleGenerateNewsIdeas = async () => {
+    console.log('🚀 === NEWS GENERATION START ===');
+    
     // Fixed query for testing B2B SaaS, AI, and Marketing trends
     const testQuery = "top 10 trending topics news B2B SaaS AI marketing enterprise software";
+    console.log('📝 Query:', testQuery);
 
     setGenerating(true);
     setError(null);
     
     try {
+      console.log('⏳ Calling GPT-5 service...');
+      
       // Generate ideas from trending news with fixed query
       const generatedIdeas = await gpt5IdeationService.generateIdeasFromNews(
         testQuery,  // Using fixed query for now
@@ -149,6 +163,9 @@ const Ideation = () => {
           targetAudience: 'B2B professionals, SaaS founders, Marketing leaders'
         }
       );
+      
+      console.log('💡 Ideas Generated:', generatedIdeas.length);
+      console.log('📊 Ideas Detail:', JSON.stringify(generatedIdeas, null, 2));
 
       // Convert and save to database
       const ideaPromises = generatedIdeas.map(async (genIdea) => {
@@ -172,18 +189,24 @@ const Ideation = () => {
         });
       });
 
+      console.log('💾 Saving to database...');
       const savedIdeas = await Promise.all(ideaPromises);
       const validIdeas = savedIdeas.filter(Boolean) as IdeaWithUI[];
+      
+      console.log('✅ Ideas saved:', validIdeas.length);
       
       setIdeas([...validIdeas, ...ideas]);
       setShowNewsModal(false);
       setNewsSearchOptions(prev => ({ ...prev, query: '' }));
       
-    } catch (err) {
-      console.error('Error generating news-based ideas:', err);
-      setError('Failed to generate news-based ideas. Please try again.');
+    } catch (err: any) {
+      console.error('❌ ERROR:', err);
+      console.error('Error message:', err.message);
+      console.error('Stack trace:', err.stack);
+      setError('Failed to generate news-based ideas. Please check console for details.');
     } finally {
       setGenerating(false);
+      console.log('✅ === NEWS GENERATION COMPLETE ===');
     }
   };
 

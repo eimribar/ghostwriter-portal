@@ -255,11 +255,16 @@ For each news-based idea, provide:
 
 // Mock tool implementations (these would call real APIs in production)
 async function executeTool(toolName: string, args: any): Promise<any> {
-  console.log(`Executing tool: ${toolName} with args:`, args);
+  console.log('🛠️ === TOOL EXECUTION ===');
+  console.log('🔧 Tool Name:', toolName);
+  console.log('📋 Arguments:', JSON.stringify(args, null, 2));
   
   switch (toolName) {
     case 'search_trending_news':
-      return {
+      console.log('🔍 Executing search_trending_news tool');
+      console.log('📰 Generating mock news for query:', args.query);
+      
+      const result = {
         articles: generateMockNewsArticles(args.query, args.limit || 10, args.timeframe || 'week'),
         trending_topics: extractTrendingTopics(args.query),
         content_angles: [
@@ -270,6 +275,12 @@ async function executeTool(toolName: string, args: any): Promise<any> {
           'Future predictions based on this trend'
         ]
       };
+      
+      console.log('📰 Tool Result - Articles Count:', result.articles.length);
+      console.log('📰 Tool Result - Topics:', result.trending_topics);
+      console.log('📰 Full Tool Result:', JSON.stringify(result, null, 2));
+      
+      return result;
     
     case 'get_trending_topics':
       return {
@@ -545,6 +556,8 @@ For each idea provide:
     userPrompt: string,
     tools?: any[]
   ): Promise<any> {
+    console.log('📡 === OPENAI API CALL ===');
+    
     const requestBody: any = {
       model: this.model,
       messages: [
@@ -560,6 +573,10 @@ For each idea provide:
       requestBody.tool_choice = 'auto';
     }
 
+    console.log('📤 Request Body:', JSON.stringify(requestBody, null, 2));
+    console.log('🔗 Endpoint:', 'https://api.openai.com/v1/chat/completions');
+    console.log('🔐 Auth Header:', `Bearer ${this.apiKey?.substring(0, 20)}...`);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -569,15 +586,23 @@ For each idea provide:
       body: JSON.stringify(requestBody)
     });
 
+    console.log('📥 Response Status:', response.status);
+    console.log('📥 Response OK:', response.ok);
+
     if (!response.ok) {
       const error = await response.json();
+      console.error('❌ === API ERROR ===');
+      console.error('Status Code:', response.status);
+      console.error('Error Details:', JSON.stringify(error, null, 2));
       throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('✅ Response Data:', JSON.stringify(data, null, 2));
     
     // Handle tool calls if present
-    if (data.choices[0].message.tool_calls) {
+    if (data.choices[0]?.message?.tool_calls) {
+      console.log('🔧 Tool Calls Detected:', data.choices[0].message.tool_calls);
       const toolResults = await this.handleToolCalls(data.choices[0].message.tool_calls);
       // Make another call with tool results
       return this.callOpenAIWithToolResults(
@@ -588,7 +613,7 @@ For each idea provide:
       );
     }
 
-    return data.choices[0].message.content;
+    return data.choices[0]?.message?.content || '';
   }
 
   // Handle tool calls from GPT-5
@@ -774,6 +799,13 @@ For each idea provide:
       targetAudience?: string;
     } = {}
   ): Promise<ContentIdeaGenerated[]> {
+    console.log('🔍 === GPT-5 NEWS SEARCH DEBUG START ===');
+    console.log('📌 Search Query:', searchQuery);
+    console.log('⚙️ Options:', JSON.stringify(options, null, 2));
+    console.log('🔑 API Key Configured:', this.isConfigured());
+    console.log('🔑 API Key (first 20 chars):', this.apiKey?.substring(0, 20) + '...');
+    console.log('🤖 Model:', this.model);
+    
     const {
       count = 10,
       timeframe = 'week',
@@ -783,9 +815,12 @@ For each idea provide:
 
     // For mock implementation
     if (!this.isConfigured()) {
+      console.warn('⚠️ No API key configured - falling back to mock data');
       console.log('Generating mock news-based ideas for:', searchQuery);
       return this.generateMockNewsIdeas(searchQuery, count, timeframe);
     }
+
+    console.log('✅ Using REAL GPT-5 API');
 
     try {
       // Use news-focused prompt and search tool
@@ -801,6 +836,9 @@ Focus on:
 
 Target audience: ${targetAudience}
 Industry context: ${industry}`;
+
+      console.log('📝 System Prompt:', systemPrompt);
+      console.log('💬 User Prompt:', userPrompt);
 
       // Include the search_trending_news tool
       const tools = [{
@@ -819,10 +857,20 @@ Industry context: ${industry}`;
         }
       }];
 
+      console.log('🔧 Tools being passed:', JSON.stringify(tools, null, 2));
+      console.log('📡 Calling OpenAI API...');
+
       const response = await this.callOpenAI(systemPrompt, userPrompt, tools);
-      return this.parseIdeasFromResponse(response);
+      
+      console.log('📥 Raw Response from OpenAI:', response);
+      const parsedIdeas = this.parseIdeasFromResponse(response);
+      console.log('💡 Parsed Ideas:', JSON.stringify(parsedIdeas, null, 2));
+      
+      return parsedIdeas;
     } catch (error) {
-      console.error('Error generating news-based ideas:', error);
+      console.error('❌ Error generating news-based ideas:', error);
+      console.error('Stack trace:', error.stack);
+      console.log('⚠️ Falling back to mock data due to error');
       return this.generateMockNewsIdeas(searchQuery, count, timeframe);
     }
   }
