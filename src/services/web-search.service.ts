@@ -1,5 +1,4 @@
 // REAL Web Search Service - NO MOCK DATA
-import { apiConfig } from '../lib/api-config';
 
 export interface WebSearchResult {
   title: string;

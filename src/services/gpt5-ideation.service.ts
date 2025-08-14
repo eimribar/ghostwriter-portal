@@ -774,44 +774,6 @@ Industry context: ${industry}`;
   }
 
   // NO MOCK DATA - removed this function
-  private generateMockNewsIdeas(
-    query: string,
-    count: number,
-    timeframe: string
-  ): ContentIdeaGenerated[] {
-    throw new Error('NO MOCK DATA - Use real API only');
-    // All mock generation removed
-
-    for (const article of newsArticles) {
-      ideas.push({
-        title: `My Take: ${article.title}`,
-        description: `Share expert commentary on the breaking news about ${query}. ${article.summary}`,
-        hook: `BREAKING: ${article.title.split(':')[1] || article.title} - Here's what it really means for you...`,
-        category: 'News Commentary',
-        targetAudience: 'Industry professionals following ' + query,
-        contentFormat: 'thought-leadership',
-        keyPoints: [
-          'Immediate implications for the industry',
-          'What this means for professionals',
-          'Hidden opportunities in this development',
-          'Potential risks to watch out for',
-          'Action steps to take right now'
-        ],
-        engagementScore: parseFloat(article.engagement_potential),
-        tags: [
-          'breaking-news',
-          query.toLowerCase().replace(/\s+/g, ''),
-          'industry-insights',
-          'trending',
-          article.source.toLowerCase()
-        ],
-        source: 'trending',
-        linkedInStyle: 'news-commentary'
-      });
-    }
-
-    return ideas;
-  }
 
   // Analyze existing ideas for patterns
   async analyzeIdeas(ideas: any[]): Promise<any> {

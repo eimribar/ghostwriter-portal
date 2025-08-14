@@ -191,7 +191,7 @@ Format the response as a JSON array of content ideas.`
   }
 
   // Parse text content into structured ideas
-  private parseTextContent(text: string, annotations: any[]): ContentIdeaGenerated[] {
+  private parseTextContent(text: string, _annotations?: any[]): ContentIdeaGenerated[] {
     const ideas: ContentIdeaGenerated[] = [];
     
     // Try to parse as JSON first
