@@ -3,13 +3,15 @@
 
 console.log('[api-config] Loading environment variables...');
 console.log('[api-config] VITE_GOOGLE_API_KEY exists:', !!import.meta.env.VITE_GOOGLE_API_KEY);
-console.log('[api-config] First 10 chars:', import.meta.env.VITE_GOOGLE_API_KEY?.substring(0, 10));
+console.log('[api-config] VITE_OPENAI_API_KEY exists:', !!import.meta.env.VITE_OPENAI_API_KEY);
+console.log('[api-config] OpenAI Key (first 10):', import.meta.env.VITE_OPENAI_API_KEY?.substring(0, 10));
+console.log('[api-config] All env vars:', Object.keys(import.meta.env));
 
 export const apiConfig = {
   // AI Language Models
   openai: {
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
-    model: import.meta.env.VITE_GPT5_MODEL || 'gpt-5',
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY || '', // Add your key in Vercel env vars
+    model: import.meta.env.VITE_GPT5_MODEL || 'gpt-5', // GPT-5 EXISTS - DO NOT CHANGE THIS
     endpoint: 'https://api.openai.com/v1/chat/completions',
     // GPT-5 specific settings
     reasoningEffort: import.meta.env.VITE_GPT5_REASONING_EFFORT || 'medium',
