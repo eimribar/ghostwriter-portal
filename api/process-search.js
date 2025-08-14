@@ -112,7 +112,7 @@ export default async function handler(req, res) {
         tool_choice: 'auto',
         reasoning: { effort: 'medium' },
         temperature: 1,
-        max_completion_tokens: 8192
+        max_output_tokens: 8192
       }),
     });
 
