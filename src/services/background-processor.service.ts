@@ -3,7 +3,6 @@
 import { searchJobsService } from './search-jobs.service';
 import { gpt5ResponsesService } from './gpt5-responses.service';
 import { contentIdeasService } from './database.service';
-import { emailService } from './email.service';
 
 class BackgroundProcessor {
   private isProcessing = false;
@@ -53,83 +52,93 @@ class BackgroundProcessor {
     console.log(`🔄 Processing search job: ${job.id}`);
 
     try {
-      // Update status to processing
-      await searchJobsService.updateStatus(job.id, 'processing', {
-        started_at: new Date()
-      });
-
-      // Call GPT-5 to generate ideas
-      const ideas = await gpt5ResponsesService.searchAndGenerateIdeas(
-        job.search_query,
-        job.search_params
-      );
-
-      console.log(`💡 Generated ${ideas.length} ideas`);
-
-      // Save ideas to database
-      const savedIds: string[] = [];
-      for (const idea of ideas) {
-        const saved = await contentIdeasService.create({
-          source: 'ai' as const,
-          title: idea.title,
-          description: idea.description,
-          hook: idea.hook,
-          key_points: idea.keyPoints,
-          target_audience: idea.targetAudience,
-          content_format: idea.contentFormat,
-          category: idea.category,
-          priority: (idea.engagementScore >= 8 ? 'high' : idea.engagementScore >= 6 ? 'medium' : 'low') as any,
-          status: 'ready' as const,
-          score: idea.engagementScore,
-          ai_model: 'gpt-5',
-          ai_reasoning_effort: 'medium' as any,
-          linkedin_style: idea.linkedInStyle,
-          hashtags: idea.tags
+      // Check if we're in production (use API) or development (process locally)
+      const isProduction = import.meta.env.VITE_ENV === 'production' || 
+                          window.location.hostname !== 'localhost';
+      
+      if (isProduction) {
+        // Call Vercel API endpoint to process the job
+        console.log('📡 Calling Vercel API to process job...');
+        
+        const apiUrl = window.location.hostname === 'localhost' 
+          ? 'http://localhost:3000/api/process-search'
+          : '/api/process-search';
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ jobId: job.id })
         });
 
-        if (saved) {
-          savedIds.push(saved.id);
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'API processing failed');
         }
-      }
 
-      // Calculate processing time
-      const startTime = new Date(job.started_at || job.created_at).getTime();
-      const endTime = new Date().getTime();
-      const processingSeconds = Math.floor((endTime - startTime) / 1000);
-      const duration = `${Math.floor(processingSeconds / 60)}m ${processingSeconds % 60}s`;
+        const result = await response.json();
+        console.log(`✅ Job ${job.id} processed by API:`, result);
+        
+      } else {
+        // Process locally (development mode)
+        console.log('🏠 Processing job locally (dev mode)...');
+        
+        // Update status to processing
+        await searchJobsService.updateStatus(job.id, 'processing', {
+          started_at: new Date()
+        });
 
-      // Update job as completed
-      await searchJobsService.updateStatus(job.id, 'completed', {
-        result_count: ideas.length,
-        ideas_generated: savedIds,
-        result_summary: `Generated ${ideas.length} content ideas`,
-        processing_time_seconds: processingSeconds,
-        completed_at: new Date()
-      });
+        // Call GPT-5 to generate ideas
+        const ideas = await gpt5ResponsesService.searchAndGenerateIdeas(
+          job.search_query,
+          job.search_params
+        );
 
-      // Send email notification
-      if (emailService.isConfigured()) {
-        const topIdeas = ideas
-          .sort((a, b) => b.engagementScore - a.engagementScore)
-          .slice(0, 3)
-          .map(idea => ({
+        console.log(`💡 Generated ${ideas.length} ideas`);
+
+        // Save ideas to database
+        const savedIds: string[] = [];
+        for (const idea of ideas) {
+          const saved = await contentIdeasService.create({
+            source: 'ai' as const,
             title: idea.title,
             description: idea.description,
-            score: idea.engagementScore
-          }));
+            hook: idea.hook,
+            key_points: idea.keyPoints,
+            target_audience: idea.targetAudience,
+            content_format: idea.contentFormat,
+            category: idea.category,
+            priority: (idea.engagementScore >= 8 ? 'high' : idea.engagementScore >= 6 ? 'medium' : 'low') as any,
+            status: 'ready' as const,
+            score: idea.engagementScore,
+            ai_model: 'gpt-5',
+            ai_reasoning_effort: 'medium' as any,
+            linkedin_style: idea.linkedInStyle,
+            hashtags: idea.tags
+          });
 
-        await emailService.sendSearchCompletionEmail({
-          searchQuery: job.search_query,
-          resultCount: ideas.length,
-          topIdeas,
-          searchDuration: duration,
-          jobId: job.id
+          if (saved) {
+            savedIds.push(saved.id);
+          }
+        }
+
+        // Calculate processing time
+        const startTime = new Date(job.started_at || job.created_at).getTime();
+        const endTime = new Date().getTime();
+        const processingSeconds = Math.floor((endTime - startTime) / 1000);
+
+        // Update job as completed
+        await searchJobsService.updateStatus(job.id, 'completed', {
+          result_count: ideas.length,
+          ideas_generated: savedIds,
+          result_summary: `Generated ${ideas.length} content ideas`,
+          processing_time_seconds: processingSeconds,
+          completed_at: new Date()
         });
 
-        await searchJobsService.markNotificationSent(job.id);
+        console.log(`✅ Job ${job.id} completed locally`);
       }
-
-      console.log(`✅ Job ${job.id} completed successfully`);
 
     } catch (error: any) {
       console.error(`❌ Job ${job.id} failed:`, error);
@@ -138,14 +147,6 @@ class BackgroundProcessor {
         error_message: error.message,
         completed_at: new Date()
       });
-
-      if (emailService.isConfigured()) {
-        await emailService.sendSearchFailureEmail(
-          job.search_query,
-          error.message,
-          job.id
-        );
-      }
     } finally {
       this.isProcessing = false;
     }
