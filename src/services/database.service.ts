@@ -298,69 +298,7 @@ export const contentPostsService = {
 // CONTENT IDEAS SERVICE
 // =====================================================
 
-export const contentIdeasService = {
-  async getByClient(clientId: string): Promise<ContentIdea[]> {
-    if (!isSupabaseConfigured()) {
-      return getMockContentIdeas().filter(i => i.client_id === clientId);
-    }
-    
-    const { data, error } = await supabase
-      .from('content_ideas')
-      .select('*')
-      .eq('client_id', clientId)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching ideas:', error);
-      return [];
-    }
-    
-    return data || [];
-  },
-
-  async create(idea: Omit<ContentIdea, 'id' | 'created_at' | 'updated_at'>): Promise<ContentIdea | null> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...idea,
-        id: crypto.randomUUID(),
-        created_at: new Date(),
-        updated_at: new Date(),
-      } as ContentIdea;
-    }
-    
-    const { data, error } = await supabase
-      .from('content_ideas')
-      .insert([idea])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creating idea:', error);
-      console.error('Error details:', error.message, error.details, error.hint);
-      return null;
-    }
-    
-    return data;
-  },
-
-  async updateStatus(id: string, status: ContentIdea['status']): Promise<boolean> {
-    if (!isSupabaseConfigured()) {
-      return true;
-    }
-    
-    const { error } = await supabase
-      .from('content_ideas')
-      .update({ status })
-      .eq('id', id);
-    
-    if (error) {
-      console.error('Error updating idea status:', error);
-      return false;
-    }
-    
-    return true;
-  },
-};
+// Old contentIdeasService removed - using new one below
 
 // =====================================================
 // GENERATED CONTENT SERVICE
@@ -770,6 +708,295 @@ export const analyticsService = {
 };
 
 // =====================================================
+// CONTENT IDEAS SERVICE
+// =====================================================
+
+export interface ContentIdeaDB {
+  id: string;
+  client_id?: string;
+  ghostwriter_id?: string;
+  user_id?: string;
+  source_post_id?: string;
+  source: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request' | 'competitor';
+  title: string;
+  description?: string;
+  hook?: string;
+  key_points?: string[];
+  target_audience?: string;
+  content_format?: string;
+  category?: string;
+  priority: 'high' | 'medium' | 'low';
+  status: 'draft' | 'ready' | 'in-progress' | 'used' | 'archived' | 'rejected';
+  score?: number;
+  predicted_engagement?: number;
+  actual_engagement?: number;
+  ai_model?: string;
+  ai_reasoning_effort?: string;
+  ai_generation_params?: any;
+  linkedin_style?: string;
+  hashtags?: string[];
+  optimal_posting_time?: Date;
+  competitor_reference?: string;
+  trend_reference?: string;
+  trend_growth_rate?: string;
+  expanded_content?: any;
+  content_variations?: any;
+  notes?: string;
+  feedback?: string;
+  rejection_reason?: string;
+  used_in_content_id?: string;
+  used_count: number;
+  created_at: Date;
+  updated_at: Date;
+  scheduled_for?: Date;
+  archived_at?: Date;
+}
+
+export const contentIdeasService = {
+  async getAll(filters?: {
+    status?: string;
+    priority?: string;
+    category?: string;
+    client_id?: string;
+    source?: string;
+  }): Promise<ContentIdeaDB[]> {
+    if (!isSupabaseConfigured()) {
+      return getMockContentIdeas().filter(idea => {
+        if (filters?.status && idea.status !== filters.status) return false;
+        if (filters?.priority && idea.priority !== filters.priority) return false;
+        if (filters?.category && idea.category !== filters.category) return false;
+        if (filters?.client_id && idea.client_id !== filters.client_id) return false;
+        if (filters?.source && idea.source !== filters.source) return false;
+        return true;
+      });
+    }
+    
+    let query = supabase
+      .from('content_ideas')
+      .select('*')
+      .is('archived_at', null)
+      .order('created_at', { ascending: false });
+    
+    if (filters?.status) query = query.eq('status', filters.status);
+    if (filters?.priority) query = query.eq('priority', filters.priority);
+    if (filters?.category) query = query.eq('category', filters.category);
+    if (filters?.client_id) query = query.eq('client_id', filters.client_id);
+    if (filters?.source) query = query.eq('source', filters.source);
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching content ideas:', error);
+      return getMockContentIdeas();
+    }
+    
+    return data || [];
+  },
+
+  async getById(id: string): Promise<ContentIdeaDB | null> {
+    if (!isSupabaseConfigured()) {
+      return getMockContentIdeas().find(i => i.id === id) || null;
+    }
+    
+    const { data, error } = await supabase
+      .from('content_ideas')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching content idea:', error);
+      return null;
+    }
+    
+    return data;
+  },
+
+  async create(idea: Omit<ContentIdeaDB, 'id' | 'created_at' | 'updated_at' | 'used_count'>): Promise<ContentIdeaDB | null> {
+    if (!isSupabaseConfigured()) {
+      const newIdea: ContentIdeaDB = {
+        ...idea,
+        id: crypto.randomUUID(),
+        used_count: 0,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+      console.log('Mock: Created content idea:', newIdea);
+      return newIdea;
+    }
+    
+    const { data, error } = await supabase
+      .from('content_ideas')
+      .insert([{
+        ...idea,
+        used_count: 0
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating content idea:', error);
+      return null;
+    }
+    
+    return data;
+  },
+
+  async createBulk(ideas: Omit<ContentIdeaDB, 'id' | 'created_at' | 'updated_at' | 'used_count'>[]): Promise<ContentIdeaDB[]> {
+    if (!isSupabaseConfigured()) {
+      return ideas.map(idea => ({
+        ...idea,
+        id: crypto.randomUUID(),
+        used_count: 0,
+        created_at: new Date(),
+        updated_at: new Date(),
+      }));
+    }
+    
+    const { data, error } = await supabase
+      .from('content_ideas')
+      .insert(ideas.map(idea => ({
+        ...idea,
+        used_count: 0
+      })))
+      .select();
+    
+    if (error) {
+      console.error('Error creating content ideas:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async update(id: string, updates: Partial<ContentIdeaDB>): Promise<ContentIdeaDB | null> {
+    if (!isSupabaseConfigured()) {
+      const idea = getMockContentIdeas().find(i => i.id === id);
+      if (idea) {
+        Object.assign(idea, updates, { updated_at: new Date() });
+        console.log('Mock: Updated content idea:', idea);
+        return idea;
+      }
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from('content_ideas')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating content idea:', error);
+      return null;
+    }
+    
+    return data;
+  },
+
+  async updateStatus(id: string, status: ContentIdeaDB['status'], notes?: string): Promise<boolean> {
+    const updates: Partial<ContentIdeaDB> = { status };
+    if (notes) updates.notes = notes;
+    
+    const result = await this.update(id, updates);
+    return !!result;
+  },
+
+  async archive(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      console.log('Mock: Archived content idea:', id);
+      return true;
+    }
+    
+    const { error } = await supabase
+      .from('content_ideas')
+      .update({ archived_at: new Date() })
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error archiving content idea:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async search(query: string): Promise<ContentIdeaDB[]> {
+    if (!isSupabaseConfigured()) {
+      const lowercaseQuery = query.toLowerCase();
+      return getMockContentIdeas().filter(idea =>
+        idea.title.toLowerCase().includes(lowercaseQuery) ||
+        idea.description?.toLowerCase().includes(lowercaseQuery) ||
+        idea.category?.toLowerCase().includes(lowercaseQuery)
+      );
+    }
+    
+    const { data, error } = await supabase
+      .from('content_ideas')
+      .select('*')
+      .is('archived_at', null)
+      .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+      .order('score', { ascending: false })
+      .limit(20);
+    
+    if (error) {
+      console.error('Error searching content ideas:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async getTopIdeas(limit: number = 10): Promise<ContentIdeaDB[]> {
+    if (!isSupabaseConfigured()) {
+      return getMockContentIdeas()
+        .filter(i => i.status === 'ready')
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, limit);
+    }
+    
+    const { data, error } = await supabase
+      .from('content_ideas')
+      .select('*')
+      .eq('status', 'ready')
+      .is('archived_at', null)
+      .order('score', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      console.error('Error fetching top ideas:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async markAsUsed(id: string, contentId: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) {
+      console.log('Mock: Marked idea as used:', id, 'for content:', contentId);
+      return true;
+    }
+    
+    const { error } = await supabase
+      .from('content_ideas')
+      .update({
+        status: 'used',
+        used_in_content_id: contentId,
+        used_count: supabase.raw('used_count + 1')
+      })
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error marking idea as used:', error);
+      return false;
+    }
+    
+    return true;
+  },
+};
+
+// =====================================================
 // MOCK DATA GENERATORS
 // =====================================================
 
@@ -880,21 +1107,94 @@ function getMockContentPosts(): ContentPost[] {
   ];
 }
 
-function getMockContentIdeas(): any[] {
+function getMockContentIdeas(): ContentIdeaDB[] {
   return [
     {
       id: '1',
       client_id: '1',
       ghostwriter_id: 'user-1',
-      source: 'content-lake',
-      title: 'The Future of AI in Business',
-      description: 'Exploring how AI is reshaping business operations',
-      hook: 'AI isn\'t coming. It\'s already here.',
-      key_points: ['Automation', 'Decision making', 'Customer experience'],
+      source: 'ai',
+      title: 'The Hidden Cost of Perfectionism in Startup Culture',
+      description: 'Explore how perfectionism can slow down innovation and what founders can do to balance quality with speed.',
+      hook: 'Perfectionism killed more startups than competition ever did.',
+      key_points: ['Ship fast and iterate', 'Perfect is the enemy of good', 'Customer feedback beats internal debates'],
+      target_audience: 'Startup founders and product managers',
+      content_format: 'thought-leadership',
+      category: 'Startup Culture',
       status: 'ready',
       priority: 'high',
-      created_at: new Date(),
-      updated_at: new Date(),
+      score: 9.2,
+      predicted_engagement: 1500,
+      ai_model: 'gpt-5',
+      ai_reasoning_effort: 'medium',
+      linkedin_style: 'provocative',
+      hashtags: ['startup', 'productivity', 'leadership', 'innovation'],
+      used_count: 0,
+      created_at: new Date('2024-03-15'),
+      updated_at: new Date('2024-03-15'),
+    },
+    {
+      id: '2',
+      client_id: '2',
+      source: 'trending',
+      title: '5 Mental Models Every Product Manager Should Know',
+      description: 'Break down complex product decisions using proven mental frameworks.',
+      hook: 'The best PMs don\'t have more answers. They have better frameworks.',
+      key_points: ['First principles thinking', 'Inversion', 'Second-order effects', 'Opportunity cost', 'Probabilistic thinking'],
+      target_audience: 'Product managers and team leads',
+      content_format: 'listicle',
+      category: 'Product Management',
+      status: 'draft',
+      priority: 'medium',
+      score: 8.5,
+      predicted_engagement: 1200,
+      linkedin_style: 'educational',
+      hashtags: ['product', 'frameworks', 'decision-making', 'leadership'],
+      trend_reference: 'Mental models trending +45% this week',
+      trend_growth_rate: '+45%',
+      used_count: 0,
+      created_at: new Date('2024-03-14'),
+      updated_at: new Date('2024-03-14'),
+    },
+    {
+      id: '3',
+      source: 'manual',
+      title: 'Building in Public: Month 1 Learnings',
+      description: 'Share authentic journey of building a product with full transparency.',
+      hook: 'I made $0 this month. Here\'s why that\'s exactly what I wanted.',
+      key_points: ['Validation before monetization', 'Community feedback is gold', 'Document everything'],
+      target_audience: 'Entrepreneurs and indie makers',
+      content_format: 'case-study',
+      category: 'Build in Public',
+      status: 'in-progress',
+      priority: 'high',
+      score: 7.8,
+      linkedin_style: 'casual',
+      hashtags: ['buildinpublic', 'entrepreneur', 'startup', 'transparency'],
+      used_count: 0,
+      created_at: new Date('2024-03-13'),
+      updated_at: new Date('2024-03-13'),
+    },
+    {
+      id: '4',
+      source: 'competitor',
+      title: 'Why Your Best Employees Leave (And How to Keep Them)',
+      description: 'Data-driven insights into employee retention based on surveys of 1000+ tech professionals.',
+      hook: '87% of top performers leave for reasons you can actually fix.',
+      key_points: ['Growth opportunities matter more than salary', 'Autonomy drives engagement', 'Recognition systems are broken'],
+      target_audience: 'HR leaders and executives',
+      content_format: 'data-driven',
+      category: 'HR & Culture',
+      status: 'ready',
+      priority: 'high',
+      score: 8.9,
+      predicted_engagement: 2000,
+      competitor_reference: 'Inspired by Josh Bersin post',
+      linkedin_style: 'professional',
+      hashtags: ['hr', 'retention', 'leadership', 'culture', 'talentmanagement'],
+      used_count: 0,
+      created_at: new Date('2024-03-12'),
+      updated_at: new Date('2024-03-12'),
     },
   ];
 }

@@ -9,8 +9,11 @@ export const apiConfig = {
   // AI Language Models
   openai: {
     apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
-    model: 'gpt-4-turbo-preview',
+    model: import.meta.env.VITE_GPT5_MODEL || 'gpt-5',
     endpoint: 'https://api.openai.com/v1/chat/completions',
+    // GPT-5 specific settings
+    reasoningEffort: import.meta.env.VITE_GPT5_REASONING_EFFORT || 'medium',
+    verbosity: import.meta.env.VITE_GPT5_VERBOSITY || 'high',
   },
   
   anthropic: {
