@@ -194,7 +194,8 @@ const Ideation = () => {
       
       console.log('✅ Ideas saved:', validIdeas.length);
       
-      setIdeas([...validIdeas, ...ideas]);
+      // Reload all ideas from database to ensure UI is in sync
+      await loadIdeas();
       setShowNewsModal(false);
       setNewsSearchOptions(prev => ({ ...prev, query: '' }));
       
@@ -269,9 +270,11 @@ const Ideation = () => {
       });
 
       const savedIdeas = await Promise.all(ideaPromises);
-      const validIdeas = savedIdeas.filter(Boolean) as IdeaWithUI[];
+      const validIdeas = savedIdeas.filter(Boolean);
+      console.log('✅ Ideas saved:', validIdeas.length);
       
-      setIdeas([...validIdeas, ...ideas]);
+      // Reload all ideas from database to ensure UI is in sync
+      await loadIdeas();
       setShowAIModal(false);
       setAiGenerationOptions(prev => ({ ...prev, topic: '' }));
       
