@@ -31,6 +31,7 @@ const Ideation = () => {
   const [selectedIdea, setSelectedIdea] = useState<IdeaWithUI | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showNewsModal, setShowNewsModal] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [aiGenerationOptions, setAiGenerationOptions] = useState({
     count: 5,
     mode: 'comprehensive' as 'comprehensive' | 'quick' | 'trend_focused' | 'news_focused',
@@ -198,28 +199,15 @@ const Ideation = () => {
         }).catch(() => console.log('Background trigger sent'));
       }
 
-      // Show success message
-      setShowNewsModal(false);
-      setNewsSearchOptions(prev => ({ ...prev, query: '' }));
-      
-      // Show notification that search has started
+      // Show confirmation state in modal
+      setShowConfirmation(true);
       setError(null);
-      const successMessage = document.createElement('div');
-      successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 z-50';
-      successMessage.innerHTML = `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-        <div>
-          <div class="font-semibold">Search Started!</div>
-          <div class="text-sm opacity-90">Check your email in ~5 minutes for results</div>
-        </div>
-      `;
-      document.body.appendChild(successMessage);
       
-      // Remove notification after 5 seconds
+      // Auto-close modal after 5 seconds
       setTimeout(() => {
-        successMessage.remove();
+        setShowNewsModal(false);
+        setShowConfirmation(false);
+        setNewsSearchOptions(prev => ({ ...prev, query: '' }));
       }, 5000);
       
     } catch (err) {
@@ -951,18 +939,23 @@ const Ideation = () => {
       {showNewsModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-2xl w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Globe className="h-6 w-6 text-zinc-900" />
-                <h2 className="text-xl font-bold text-zinc-900">Generate Ideas from Trending News</h2>
-              </div>
-              <button 
-                onClick={() => setShowNewsModal(false)}
-                className="text-zinc-400 hover:text-zinc-600"
-              >
-                ✕
-              </button>
-            </div>
+            {!showConfirmation ? (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-6 w-6 text-zinc-900" />
+                    <h2 className="text-xl font-bold text-zinc-900">Generate Ideas from Trending News</h2>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setShowNewsModal(false);
+                      setShowConfirmation(false);
+                    }}
+                    className="text-zinc-400 hover:text-zinc-600"
+                  >
+                    ✕
+                  </button>
+                </div>
             
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
@@ -1037,6 +1030,64 @@ const Ideation = () => {
                 )}
               </button>
             </div>
+              </>
+            ) : (
+              /* Confirmation View */
+              <div className="text-center">
+                <div className="mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-10 w-10 text-green-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-zinc-900 mb-2">
+                    Your search is running in the background!
+                  </h2>
+                  <p className="text-zinc-600 mb-4">
+                    We're gathering trending news and content ideas for you
+                  </p>
+                </div>
+                
+                <div className="bg-green-50 rounded-lg p-4 mb-6">
+                  <div className="space-y-2 text-left">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-green-800">
+                        <strong>You can close this window</strong> - the search continues in the background
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Mail className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-green-800">
+                        <strong>Email notification coming</strong> - we'll send results to {import.meta.env.VITE_ADMIN_EMAIL || 'your email'} in 2-5 minutes
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-green-800">
+                        <strong>Ideas will auto-populate</strong> - refresh this page or check back later
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-zinc-50 rounded-lg p-3 mb-6">
+                  <p className="text-xs text-zinc-600">
+                    💡 <strong>Tip:</strong> Our AI is searching real-time news from the past week about B2B SaaS, AI, and Marketing. 
+                    This typically takes 2-5 minutes for comprehensive results.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowNewsModal(false);
+                    setShowConfirmation(false);
+                    setNewsSearchOptions(prev => ({ ...prev, query: '' }));
+                  }}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Got it! 👍
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
