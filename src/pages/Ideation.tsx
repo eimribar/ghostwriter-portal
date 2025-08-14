@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
-import { gpt5IdeationService } from '../services/gpt5-ideation.service';
+import { gpt5ResponsesService } from '../services/gpt5-responses.service';
 
 // Using ContentIdeaDB from database service
 interface IdeaWithUI extends ContentIdeaDB {
@@ -69,12 +69,10 @@ const Ideation = () => {
   // Load ideas from database on mount
   useEffect(() => {
     console.log('🔐 === GPT-5 Configuration Check ===');
-    console.log('- Service configured:', gpt5IdeationService.isConfigured());
+    console.log('- Service configured:', gpt5ResponsesService.isConfigured());
     console.log('- API Key exists:', !!import.meta.env.VITE_OPENAI_API_KEY);
     console.log('- API Key (first 20 chars):', import.meta.env.VITE_OPENAI_API_KEY?.substring(0, 20) + '...');
     console.log('- Model:', import.meta.env.VITE_GPT5_MODEL || 'gpt-5 (default)');
-    console.log('- Reasoning effort:', import.meta.env.VITE_GPT5_REASONING_EFFORT || 'medium (default)');
-    console.log('- Verbosity:', import.meta.env.VITE_GPT5_VERBOSITY || 'high (default)');
     console.log('🔐 === End Configuration Check ===');
     
     loadIdeas();
@@ -141,24 +139,25 @@ const Ideation = () => {
   };
 
   const handleGenerateNewsIdeas = async () => {
-    console.log('🚀 === NEWS GENERATION START ===');
+    console.log('🚀 === NEWS GENERATION WITH REAL WEB SEARCH ===');
     
-    // Fixed query for testing B2B SaaS, AI, and Marketing trends
-    const testQuery = "top 10 trending topics news B2B SaaS AI marketing enterprise software";
-    console.log('📝 Query:', testQuery);
+    // Your exact query for finding real news
+    const searchQuery = "find me the top 10 trending topics (news) with context related to b2b saas, ai and marketing. actual news from the past week";
+    console.log('📝 Search Query:', searchQuery);
 
     setGenerating(true);
     setError(null);
     
     try {
-      console.log('⏳ Calling GPT-5 service...');
+      console.log('⏳ Calling GPT-5 Responses API with Web Search...');
+      console.log('🌐 This will take 2-5 minutes for real web search...');
       
-      // Generate ideas from trending news with fixed query
-      const generatedIdeas = await gpt5IdeationService.generateIdeasFromNews(
-        testQuery,  // Using fixed query for now
+      // Generate ideas from REAL trending news using GPT-5 Responses API
+      const generatedIdeas = await gpt5ResponsesService.searchAndGenerateIdeas(
+        searchQuery,
         {
-          count: 10,  // Always get 10 ideas
-          timeframe: 'week',  // Past week of news
+          count: 10,
+          timeframe: 'week',
           industry: 'B2B SaaS',
           targetAudience: 'B2B professionals, SaaS founders, Marketing leaders'
         }
@@ -220,17 +219,33 @@ const Ideation = () => {
     setError(null);
     
     try {
-      // Generate ideas using GPT-5
-      const generatedIdeas = await gpt5IdeationService.generateIdeas(
-        aiGenerationOptions.topic,
-        {
-          count: aiGenerationOptions.count,
-          mode: aiGenerationOptions.mode,
-          industry: aiGenerationOptions.industry,
-          targetAudience: aiGenerationOptions.targetAudience,
-          useTools: true
-        }
-      );
+      let generatedIdeas;
+      
+      // Use Responses API for news-focused mode, otherwise use regular generation
+      if (aiGenerationOptions.mode === 'news_focused') {
+        console.log('Using GPT-5 Responses API with Web Search for news-focused mode');
+        generatedIdeas = await gpt5ResponsesService.searchAndGenerateIdeas(
+          aiGenerationOptions.topic,
+          {
+            count: aiGenerationOptions.count,
+            timeframe: 'week',
+            industry: aiGenerationOptions.industry,
+            targetAudience: aiGenerationOptions.targetAudience
+          }
+        );
+      } else {
+        // For non-news modes, we'll also use the Responses API for consistency
+        console.log('Using GPT-5 Responses API for idea generation');
+        generatedIdeas = await gpt5ResponsesService.searchAndGenerateIdeas(
+          aiGenerationOptions.topic,
+          {
+            count: aiGenerationOptions.count,
+            timeframe: 'week',
+            industry: aiGenerationOptions.industry,
+            targetAudience: aiGenerationOptions.targetAudience
+          }
+        );
+      }
 
       // Convert and save to database
       const ideaPromises = generatedIdeas.map(async (genIdea) => {
@@ -805,8 +820,8 @@ const Ideation = () => {
 
               <div className="bg-zinc-50 rounded-lg p-3">
                 <p className="text-xs text-zinc-600">
-                  <strong>Note:</strong> GPT-5 will analyze trends, competitors, and generate high-quality content ideas optimized for LinkedIn engagement.
-                  {!gpt5IdeationService.isConfigured() && (
+                  <strong>Note:</strong> GPT-5 with web search will find real news and generate high-quality content ideas optimized for LinkedIn engagement.
+                  {!gpt5ResponsesService.isConfigured() && (
                     <span className="block mt-1 text-amber-600">
                       ⚠️ OpenAI API key not configured. Add VITE_OPENAI_API_KEY to your environment variables.
                     </span>
@@ -903,8 +918,8 @@ const Ideation = () => {
 
               <div className="bg-amber-50 rounded-lg p-3">
                 <p className="text-xs text-amber-800">
-                  <strong>💡 Pro Tip:</strong> News-based content gets 3x more engagement when posted within 24-48 hours of breaking news. 
-                  Act fast on these ideas!
+                  <strong>💡 Pro Tip:</strong> This will search REAL web news and may take 2-5 minutes. 
+                  News-based content gets 3x more engagement when posted within 24-48 hours of breaking news!
                 </p>
               </div>
             </div>

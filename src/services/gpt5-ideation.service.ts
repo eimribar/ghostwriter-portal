@@ -1,4 +1,5 @@
 import { apiConfig } from '../lib/api-config';
+import { webSearchService } from './web-search.service';
 
 // GPT-5 specific types
 export interface GPT5IdeationRequest {
@@ -253,34 +254,49 @@ For each news-based idea, provide:
 </output_format>`
 };
 
-// Mock tool implementations (these would call real APIs in production)
+// REAL tool implementations - NO MOCK DATA
 async function executeTool(toolName: string, args: any): Promise<any> {
-  console.log('🛠️ === TOOL EXECUTION ===');
+  console.log('🛠️ === REAL TOOL EXECUTION ===');
   console.log('🔧 Tool Name:', toolName);
   console.log('📋 Arguments:', JSON.stringify(args, null, 2));
   
   switch (toolName) {
     case 'search_trending_news':
-      console.log('🔍 Executing search_trending_news tool');
-      console.log('📰 Generating mock news for query:', args.query);
+    case 'web_search':
+      console.log('🔍 Executing REAL web search');
+      console.log('🌐 Query:', args.query);
       
-      const result = {
-        articles: generateMockNewsArticles(args.query, args.limit || 10, args.timeframe || 'week'),
-        trending_topics: extractTrendingTopics(args.query),
-        content_angles: [
-          'Expert commentary on implications',
-          'Contrarian perspective',
-          'Practical application for professionals',
-          'Industry impact analysis',
-          'Future predictions based on this trend'
-        ]
-      };
-      
-      console.log('📰 Tool Result - Articles Count:', result.articles.length);
-      console.log('📰 Tool Result - Topics:', result.trending_topics);
-      console.log('📰 Full Tool Result:', JSON.stringify(result, null, 2));
-      
-      return result;
+      try {
+        // REAL WEB SEARCH - NO MOCK DATA
+        const searchResults = await webSearchService.search(args.query, args.limit || 10);
+        
+        const result = {
+          articles: searchResults.map(item => ({
+            title: item.title,
+            source: item.displayLink,
+            summary: item.snippet,
+            url: item.link,
+            relevance_score: 10,
+            engagement_potential: 9
+          })),
+          trending_topics: searchResults.slice(0, 5).map(r => r.title),
+          content_angles: [
+            'Expert commentary on implications',
+            'Contrarian perspective',
+            'Practical application for professionals',
+            'Industry impact analysis',
+            'Future predictions based on this trend'
+          ]
+        };
+        
+        console.log('✅ REAL Search Results Count:', result.articles.length);
+        console.log('📰 Real Articles:', result.articles);
+        
+        return result;
+      } catch (error) {
+        console.error('❌ Web search failed:', error);
+        throw error;
+      }
     
     case 'get_trending_topics':
       return {
@@ -352,92 +368,7 @@ async function executeTool(toolName: string, args: any): Promise<any> {
   }
 }
 
-// Generate mock news articles for testing
-function generateMockNewsArticles(query: string, limit: number, timeframe: string): any[] {
-  const sources = ['TechCrunch', 'Forbes', 'Bloomberg', 'Reuters', 'The Verge', 'WSJ', 'Financial Times'];
-  const articles = [];
-  
-  // Calculate date range based on timeframe
-  const now = new Date();
-  const daysAgo = timeframe === 'today' ? 1 : timeframe === 'week' ? 7 : 30;
-  
-  for (let i = 0; i < limit; i++) {
-    const hoursAgo = Math.floor(Math.random() * (daysAgo * 24));
-    const articleDate = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
-    
-    articles.push({
-      title: generateNewsTitle(query, i),
-      source: sources[Math.floor(Math.random() * sources.length)],
-      date: articleDate.toISOString().split('T')[0],
-      time_ago: formatTimeAgo(hoursAgo),
-      summary: `Breaking developments in ${query} are reshaping the industry landscape. Experts predict significant impacts on businesses and professionals worldwide.`,
-      url: `https://example.com/news/${query.toLowerCase().replace(/\s+/g, '-')}-${i}`,
-      relevance_score: (Math.random() * 3 + 7).toFixed(1), // 7.0-10.0
-      engagement_potential: Math.floor(Math.random() * 3) + 8, // 8-10
-      key_points: [
-        `Major shift in ${query} landscape`,
-        'Industry leaders respond to changes',
-        'New opportunities emerging for professionals',
-        'Regulatory implications being evaluated'
-      ]
-    });
-  }
-  
-  return articles.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-}
-
-// Generate realistic news titles
-function generateNewsTitle(query: string, index: number): string {
-  const templates = [
-    `Breaking: Major ${query} Development Shakes Industry`,
-    `${query} Reaches New Milestone, Experts Weigh In`,
-    `How ${query} is Transforming Business in 2024`,
-    `Exclusive: Inside the ${query} Revolution`,
-    `${query} Disruption: What It Means for Your Career`,
-    `New Study Reveals Surprising ${query} Trends`,
-    `Industry Alert: ${query} Changes Everything`,
-    `The Unexpected Rise of ${query} in Enterprise`,
-    `${query} 2024: Predictions vs Reality`,
-    `Why ${query} is the Most Important Trend Right Now`
-  ];
-  
-  return templates[index % templates.length];
-}
-
-// Format time ago for display
-function formatTimeAgo(hours: number): string {
-  if (hours < 1) return 'Just now';
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return '1 day ago';
-  if (days < 7) return `${days} days ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks === 1) return '1 week ago';
-  return `${weeks} weeks ago`;
-}
-
-// Extract trending topics from query
-function extractTrendingTopics(query: string): string[] {
-  const baseTopics = [
-    `${query} adoption`,
-    `${query} best practices`,
-    `${query} challenges`,
-    `${query} opportunities`,
-    `${query} innovation`
-  ];
-  
-  const trendingModifiers = [
-    'in 2024',
-    'for enterprises',
-    'disruption',
-    'transformation',
-    'future trends'
-  ];
-  
-  return baseTopics.slice(0, 5).map((topic, i) => 
-    `${topic} ${trendingModifiers[i]}`
-  );
-}
+// NO MOCK DATA - All functions removed
 
 function generateHookForStyle(topic: string, style: string): string {
   const templates = {
@@ -500,8 +431,7 @@ export class GPT5IdeationService {
     } = {}
   ): Promise<ContentIdeaGenerated[]> {
     if (!this.isConfigured()) {
-      console.warn('GPT-5 not configured, returning mock ideas');
-      return this.generateMockIdeas(topic, options.count || 5);
+      throw new Error('GPT-5 API key not configured. Please set VITE_OPENAI_API_KEY');
     }
 
     const {
@@ -546,7 +476,7 @@ For each idea provide:
       return this.parseIdeasFromResponse(response);
     } catch (error) {
       console.error('Error generating ideas with GPT-5:', error);
-      return this.generateMockIdeas(topic, count);
+      throw error;  // NO MOCK DATA - throw real errors
     }
   }
 
@@ -564,7 +494,7 @@ For each idea provide:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.8,
+      temperature: 1,  // GPT-5 only supports temperature of 1
       max_completion_tokens: 4000  // GPT-5 uses max_completion_tokens, not max_tokens
     };
 
@@ -655,7 +585,7 @@ For each idea provide:
       body: JSON.stringify({
         model: this.model,
         messages,
-        temperature: 0.8,
+        temperature: 1,  // GPT-5 only supports temperature of 1
         max_completion_tokens: 4000  // GPT-5 uses max_completion_tokens
       })
     });
@@ -758,36 +688,7 @@ For each idea provide:
     };
   }
 
-  // Generate mock ideas for testing
-  private generateMockIdeas(topic: string, count: number): ContentIdeaGenerated[] {
-    const ideas: ContentIdeaGenerated[] = [];
-    const formats = ['thought-leadership', 'how-to', 'case-study', 'opinion', 'data-driven'];
-    const categories = ['Technology', 'Leadership', 'Innovation', 'Strategy', 'Growth'];
-    
-    for (let i = 0; i < count; i++) {
-      ideas.push({
-        title: `${topic} - Idea ${i + 1}: Revolutionary approach to modern challenges`,
-        description: `Explore how ${topic} is transforming the industry landscape and creating new opportunities for growth and innovation.`,
-        hook: `What if everything you know about ${topic} is about to change?`,
-        category: categories[i % categories.length],
-        targetAudience: 'B2B Decision Makers',
-        contentFormat: formats[i % formats.length],
-        keyPoints: [
-          'Start with the problem, not the solution',
-          'Data-driven insights reveal hidden patterns',
-          'Small experiments lead to breakthrough innovations',
-          'Collaboration accelerates transformation',
-          'Measure impact, not just activity'
-        ],
-        engagementScore: Math.floor(Math.random() * 3) + 7,
-        tags: ['innovation', topic.toLowerCase().replace(/\s+/g, ''), 'strategy', 'growth'],
-        source: 'ai-generated',
-        linkedInStyle: 'thought-leadership'
-      });
-    }
-    
-    return ideas;
-  }
+  // NO MOCK DATA - removed mock generation
 
   // Generate ideas from trending news
   async generateIdeasFromNews(
@@ -813,11 +714,9 @@ For each idea provide:
       targetAudience = 'B2B professionals'
     } = options;
 
-    // For mock implementation
+    // NO MOCK DATA - require API key
     if (!this.isConfigured()) {
-      console.warn('⚠️ No API key configured - falling back to mock data');
-      console.log('Generating mock news-based ideas for:', searchQuery);
-      return this.generateMockNewsIdeas(searchQuery, count, timeframe);
+      throw new Error('❌ GPT-5 API key not configured. Please set VITE_OPENAI_API_KEY');
     }
 
     console.log('✅ Using REAL GPT-5 API');
@@ -870,19 +769,18 @@ Industry context: ${industry}`;
     } catch (error: any) {
       console.error('❌ Error generating news-based ideas:', error);
       console.error('Stack trace:', error?.stack);
-      console.log('⚠️ Falling back to mock data due to error');
-      return this.generateMockNewsIdeas(searchQuery, count, timeframe);
+      throw error;  // NO MOCK DATA - throw real errors
     }
   }
 
-  // Generate mock news-based ideas
+  // NO MOCK DATA - removed this function
   private generateMockNewsIdeas(
     query: string,
     count: number,
     timeframe: string
   ): ContentIdeaGenerated[] {
-    const newsArticles = generateMockNewsArticles(query, count, timeframe);
-    const ideas: ContentIdeaGenerated[] = [];
+    throw new Error('NO MOCK DATA - Use real API only');
+    // All mock generation removed
 
     for (const article of newsArticles) {
       ideas.push({
