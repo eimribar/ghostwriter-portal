@@ -7,9 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2025.08.14] - 2025-08-14 - GPT-5 Web Search Integration
+
 ### Added
-- Comprehensive CLAUDE.md documentation file with full technical specifications
-- CHANGELOG.md for tracking all major changes going forward
+- **GPT-5 Responses API Integration** (`/v1/responses` endpoint)
+  - New `gpt5-responses.service.ts` for real web search
+  - `tools: [{ type: "web_search" }]` configuration
+  - 2-5 minute processing for comprehensive news search
+  - Returns actual news with source URLs and dates
+- **Content Ideation Page** (`/ideation`)
+  - News & Trends button for real-time news search
+  - AI Generation with multiple modes (Comprehensive, Quick, Trend-focused, News-focused)
+  - Engagement scoring and optimization
+  - Source tracking (trending, competitor, ai-generated)
+- **Web Search Service** (`web-search.service.ts`)
+  - Support for multiple search APIs (Google, Bing, SerpAPI)
+  - Fallback mechanisms for API availability
+
+### Changed
+- **Updated Ideation.tsx** to use GPT-5 Responses API
+- **Fixed GPT-5 Parameters**:
+  - `reasoning.effort` instead of `reasoning_effort`
+  - `temperature: 1` (GPT-5 only supports 1)
+  - `max_completion_tokens` instead of `max_tokens`
+- **Environment Variables**: Added GPT-5 configuration requirements
+
+### Removed
+- **ALL MOCK DATA** from GPT-5 ideation service
+- Mock news generation functions
+- Fallback to mock when API key missing (now throws error)
+
+### Fixed
+- GPT-5 parameter structure for Responses API
+- Temperature value (must be 1 for GPT-5)
+- Token parameter name (max_completion_tokens)
+
+### Security
+- Removed exposed API keys from test files
+- All sensitive data now in environment variables only
 
 ## [2024.12.14 - Part 3] - 2024-12-14 (Final Portal Integration)
 

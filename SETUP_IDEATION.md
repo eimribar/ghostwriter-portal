@@ -17,19 +17,15 @@
 
 ### Step 2: Configure API Keys
 
-#### Option A: For Testing (Uses Mock Data)
-No API key needed! The system will automatically use mock data when no OpenAI key is configured.
-
-#### Option B: For Production (Real GPT-5)
+#### REQUIRED: Real GPT-5 Configuration (NO MOCK DATA)
+**Important**: The system no longer supports mock data. You MUST configure a real OpenAI API key.
 1. Create/update `.env.local` file in the project root:
 ```bash
 # Required for real GPT-5 generation
 VITE_OPENAI_API_KEY=sk-...your-openai-api-key...
 
-# Optional: Customize GPT-5 settings
-VITE_GPT5_MODEL=gpt-5              # Options: gpt-5, gpt-5-mini, gpt-5-nano
-VITE_GPT5_REASONING_EFFORT=medium  # Options: minimal, low, medium, high
-VITE_GPT5_VERBOSITY=high          # Options: low, medium, high
+# Model configuration
+VITE_GPT5_MODEL=gpt-5              # Default: gpt-5 (DO NOT CHANGE)
 ```
 
 2. Get your OpenAI API key from: https://platform.openai.com/api-keys

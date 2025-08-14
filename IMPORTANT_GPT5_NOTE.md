@@ -24,8 +24,25 @@
 model: 'gpt-5' // THIS IS CORRECT - DO NOT CHANGE
 ```
 
+## WORKING CONFIGURATION (August 14, 2025)
+
+### Confirmed Working Parameters:
+- **Endpoint**: `/v1/responses` (NOT `/v1/chat/completions`)
+- **Temperature**: Must be `1` (GPT-5 only supports 1, not 0.8)
+- **Max Tokens**: Use `max_completion_tokens` NOT `max_tokens`
+- **Reasoning**: Use `reasoning.effort` NOT `reasoning_effort`
+- **Web Search**: `tools: [{ type: "web_search" }]`
+- **Processing Time**: 2-5 minutes for web search (this is normal)
+
+### Successfully Retrieved Real News:
+- Oracle/Google Gemini partnership
+- $9B Oklahoma AI investment
+- OpenX antitrust lawsuit
+- And 7+ more real news items with URLs
+
 ## If You See Errors:
 1. Check if API key is loaded (console: API Key exists: true/false)
 2. Check Vercel environment variables
 3. Check network connectivity
-4. But NEVER assume gpt-5 doesn't exist - IT DOES!
+4. Check parameter names (see above)
+5. But NEVER assume gpt-5 doesn't exist - IT DOES AND IT WORKS!

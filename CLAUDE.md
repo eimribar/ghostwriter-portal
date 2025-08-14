@@ -8,7 +8,9 @@
 - **Build Tool**: Vite 7.1.2
 - **Styling**: Tailwind CSS with custom zinc/black/white design system
 - **Database**: Supabase (PostgreSQL with Row Level Security)
-- **AI Integration**: Google Gemini 2.5 Pro API (1M+ tokens, Google Grounding enabled)
+- **AI Integration**: 
+  - Google Gemini 2.5 Pro API (1M+ tokens, Google Grounding enabled)
+  - GPT-5 Responses API with Web Search (Real-time news, 2-5 min processing)
 - **Deployment**: Vercel
 - **State Management**: React Context API
 
@@ -31,11 +33,14 @@ ghostwriter-portal/
 │   │   ├── Generate.tsx       # Content generation (no client required)
 │   │   ├── Approval.tsx       # Content approval queue
 │   │   ├── Prompts.tsx        # Prompt management system
+│   │   ├── Ideation.tsx       # Content ideation with GPT-5 web search
 │   │   ├── Schedule.tsx       # Post scheduling
 │   │   ├── Clients.tsx        # Client management
 │   │   └── Analytics.tsx      # Performance metrics
 │   ├── services/
-│   │   └── database.service.ts # Database operations + promptTemplatesService
+│   │   ├── database.service.ts # Database operations + promptTemplatesService
+│   │   ├── gpt5-responses.service.ts # GPT-5 Responses API with web search
+│   │   └── web-search.service.ts # Web search API integrations
 │   └── App.tsx                # Main app component
 ├── create_prompt_templates_table.sql  # Prompt system database schema
 ├── populate_prompts.sql       # Actual LinkedIn prompts data
@@ -57,10 +62,16 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 # Google Gemini API
 VITE_GOOGLE_API_KEY=your_google_api_key_here
 
+# GPT-5 Configuration (REQUIRED for Ideation)
+VITE_OPENAI_API_KEY=your_openai_api_key_here  # GPT-5 access required
+VITE_GPT5_MODEL=gpt-5                         # Model name (default: gpt-5)
+
 # Optional APIs
-VITE_OPENAI_API_KEY=           # For GPT-4 integration
 VITE_ANTHROPIC_API_KEY=        # For Claude integration
 VITE_APIFY_API_KEY=            # For LinkedIn scraping
+VITE_GOOGLE_SEARCH_API_KEY=    # For web search fallback
+VITE_BING_SEARCH_API_KEY=      # For web search fallback
+VITE_SERPAPI_KEY=              # For web search fallback
 ```
 
 ## Key Features
@@ -84,7 +95,20 @@ VITE_APIFY_API_KEY=            # For LinkedIn scraping
 - Filter by status: all/draft/admin_approved/admin_rejected
 - Content flows: draft → admin_approved → client_approved → scheduled/published
 
-### 3. Portal Integration
+### 3. Content Ideation (`/ideation`) - GPT-5 Powered
+- **News & Trends**: Real-time web search for trending topics
+  - Uses GPT-5 Responses API (`/v1/responses` endpoint)
+  - Enables `tools: [{ type: "web_search" }]` for real web search
+  - Takes 2-5 minutes for comprehensive news search
+  - Returns actual news with source URLs and dates
+- **AI Generation**: Generate ideas from any topic
+  - Multiple modes: Comprehensive, Quick, Trend-focused, News-focused
+  - Industry and audience targeting
+  - Engagement scoring and optimization
+- **NO MOCK DATA**: All searches are real, no fallback to mock
+- **Fixed Query**: "find me the top 10 trending topics (news) with context related to b2b saas, ai and marketing. actual news from the past week"
+
+### 4. Portal Integration
 - **Portal Switcher**: Bottom-right button to navigate to User Portal
 - **Shared Database**: Both portals use same Supabase instance
 - **URLs**:
@@ -101,7 +125,7 @@ The application requires these tables to be created in Supabase. Run the migrati
 2. `fix_rls_policies.sql` - Sets up Row Level Security
 3. `fix_status_constraint.sql` - Fixes status enum values
 
-### 4. Prompt Management (`/prompts`)
+### 5. Prompt Management (`/prompts`)
 - Full CRUD operations for AI prompts
 - Categories: Content Generation, Content Ideation, Content Editing
 - Search by name, description, or tags
@@ -342,15 +366,26 @@ npm run type-check
 - [x] Prompt management system fully functional
 - [x] All mock data removed from User Portal
 
+## Recent Updates (August 2025)
+
+### August 14, 2025 - GPT-5 Web Search Integration
+- **GPT-5 Responses API**: Implemented `/v1/responses` endpoint with web search
+- **Real Web Search**: `tools: [{ type: "web_search" }]` for actual news
+- **NO MOCK DATA**: Removed all mock functions, only real API calls
+- **Processing Time**: 2-5 minutes for comprehensive web search
+- **Proven Results**: Successfully retrieved real news (Oracle/Google deal, $9B Oklahoma investment, etc.)
+- **Fixed Parameters**: `reasoning.effort` instead of `reasoning_effort`
+- **Content Ideation**: Full implementation at `/ideation` with News & Trends
+
 ## Next Steps & Roadmap
 
-### Immediate Next: Content Ideation
-- [ ] **Create Content Ideation System**
-  - [ ] Idea capture from multiple sources
-  - [ ] AI-powered idea enhancement
-  - [ ] Topic clustering and organization
-  - [ ] Trend analysis integration
-  - [ ] Competitor content analysis
+### ✅ COMPLETED: Content Ideation System
+- [x] **GPT-5 Web Search Integration**
+  - [x] Real-time news search from web
+  - [x] Trend analysis with actual data
+  - [x] Multiple idea generation modes
+  - [x] Source URLs and publication dates
+  - [x] Engagement scoring
 
 ### Future Enhancements
 - [ ] Add bulk approval functionality
