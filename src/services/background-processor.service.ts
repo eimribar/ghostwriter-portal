@@ -10,14 +10,21 @@ class BackgroundProcessor {
 
   // Start processing pending jobs
   startProcessing() {
-    if (this.processingInterval) return;
+    if (this.processingInterval) {
+      console.log('⚠️ Background processor already running');
+      return;
+    }
 
+    console.log('🚀 Starting background processor...');
+    
     // Check for pending jobs every 30 seconds
     this.processingInterval = setInterval(() => {
+      console.log('⏰ Background processor checking for jobs...');
       this.checkAndProcessJobs();
     }, 30000);
 
     // Also check immediately
+    console.log('🔍 Initial check for pending jobs...');
     this.checkAndProcessJobs();
   }
 

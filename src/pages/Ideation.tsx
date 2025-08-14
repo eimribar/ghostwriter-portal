@@ -166,22 +166,49 @@ const Ideation = () => {
   // Manual function to check and send pending email notifications
   const checkAndSendPendingEmails = async () => {
     console.log('📧 Checking for pending email notifications...');
+    
+    // Show loading state
+    setError(null);
+    
     try {
-      const response = await fetch('/api/check-and-notify', {
+      // Determine the API URL
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5173/api/check-and-notify'
+        : '/api/check-and-notify';
+        
+      console.log('📡 Calling:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
       
+      console.log('📬 Response status:', response.status);
+      
       if (response.ok) {
         const result = await response.json();
-        console.log(`✅ Email check complete: ${result.notificationsSent} emails sent`);
+        console.log('✅ Email check complete:', result);
+        
         if (result.notificationsSent > 0) {
+          console.log(`📧 Sent ${result.notificationsSent} email(s)`);
           // Reload active jobs to update status
           await loadActiveJobs();
+          // Show success message
+          setError(`✅ Successfully sent ${result.notificationsSent} email notification(s)`);
+          setTimeout(() => setError(null), 5000);
+        } else {
+          console.log('📭 No pending emails to send');
+          setError('ℹ️ No pending email notifications to send');
+          setTimeout(() => setError(null), 3000);
         }
+      } else {
+        const errorData = await response.text();
+        console.error('❌ API Error:', errorData);
+        setError('Failed to check emails. Check console for details.');
       }
     } catch (err) {
-      console.error('Failed to check pending emails:', err);
+      console.error('❌ Failed to check pending emails:', err);
+      setError('Error checking emails. See console for details.');
     }
   };
 
@@ -211,16 +238,38 @@ const Ideation = () => {
 
       console.log('✅ Search job created:', searchJob.id);
       
-      // Trigger the Edge Function to process the search
-      // Note: In production, this would be triggered automatically by database webhook
-      // For now, we'll call it directly
-      if (import.meta.env.VITE_ENV === 'production') {
-        fetch('/.netlify/functions/trigger-search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobId: searchJob.id })
-        }).catch(() => console.log('Background trigger sent'));
-      }
+      // Immediately trigger processing via API
+      console.log('🔄 Triggering API to process search job...');
+      
+      // Determine the API URL
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5173/api/process-search'
+        : '/api/process-search';
+        
+      // Call the API to process the job immediately
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: searchJob.id })
+      })
+      .then(response => {
+        if (response.ok) {
+          console.log('✅ Search processing triggered successfully');
+          return response.json();
+        } else {
+          console.error('❌ Failed to trigger search processing:', response.status);
+        }
+      })
+      .then(data => {
+        if (data) {
+          console.log('📊 Processing response:', data);
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error triggering search:', error);
+        // The background processor will pick it up eventually
+        console.log('⏰ Background processor will handle it in next cycle');
+      });
 
       // Show confirmation state in modal
       setShowConfirmation(true);

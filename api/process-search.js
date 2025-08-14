@@ -56,8 +56,16 @@ export default async function handler(req, res) {
       })
       .eq('id', jobId);
 
+    // Check for API key
+    if (!process.env.VITE_OPENAI_API_KEY) {
+      throw new Error('Missing VITE_OPENAI_API_KEY environment variable');
+    }
+    
     // Call GPT-5 API
     console.log('Calling GPT-5 API...');
+    console.log('API Key exists:', !!process.env.VITE_OPENAI_API_KEY);
+    console.log('API Key prefix:', process.env.VITE_OPENAI_API_KEY?.substring(0, 20));
+    
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
