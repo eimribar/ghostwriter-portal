@@ -760,7 +760,10 @@ export const contentIdeasService = {
     client_id?: string;
     source?: string;
   }): Promise<ContentIdeaDB[]> {
+    console.log('🔍 ContentIdeasService.getAll called with filters:', filters);
+    
     if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase not configured, returning mock data');
       return getMockContentIdeas().filter(idea => {
         if (filters?.status && idea.status !== filters.status) return false;
         if (filters?.priority && idea.priority !== filters.priority) return false;
@@ -771,6 +774,7 @@ export const contentIdeasService = {
       });
     }
     
+    console.log('📡 Fetching from Supabase content_ideas table...');
     let query = supabase
       .from('content_ideas')
       .select('*')
@@ -786,10 +790,13 @@ export const contentIdeasService = {
     const { data, error } = await query;
     
     if (error) {
-      console.error('Error fetching content ideas:', error);
+      console.error('❌ Error fetching content ideas from Supabase:', error);
+      console.error('Error details:', { code: error.code, message: error.message, details: error.details });
+      console.warn('⚠️ Falling back to mock data due to error');
       return getMockContentIdeas();
     }
     
+    console.log('✅ Successfully fetched ideas from database:', data?.length || 0, 'ideas');
     return data || [];
   },
 
@@ -813,6 +820,8 @@ export const contentIdeasService = {
   },
 
   async create(idea: Omit<ContentIdeaDB, 'id' | 'created_at' | 'updated_at' | 'used_count'>): Promise<ContentIdeaDB | null> {
+    console.log('📝 Creating content idea:', idea);
+    
     if (!isSupabaseConfigured()) {
       const newIdea: ContentIdeaDB = {
         ...idea,
@@ -825,6 +834,7 @@ export const contentIdeasService = {
       return newIdea;
     }
     
+    console.log('💾 Inserting into Supabase content_ideas table...');
     const { data, error } = await supabase
       .from('content_ideas')
       .insert([{
@@ -835,10 +845,18 @@ export const contentIdeasService = {
       .single();
     
     if (error) {
-      console.error('Error creating content idea:', error);
+      console.error('❌ Error creating content idea:', error);
+      console.error('Error details:', { 
+        code: error.code, 
+        message: error.message, 
+        details: error.details,
+        hint: error.hint
+      });
+      console.error('Failed idea data:', idea);
       return null;
     }
     
+    console.log('✅ Successfully created content idea:', data?.id);
     return data;
   },
 

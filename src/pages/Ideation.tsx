@@ -82,10 +82,12 @@ const Ideation = () => {
     setLoading(true);
     setError(null);
     try {
+      console.log('📥 Loading ideas from database...');
       const fetchedIdeas = await contentIdeasService.getAll();
+      console.log('📊 Fetched ideas:', fetchedIdeas.length, fetchedIdeas);
       setIdeas(fetchedIdeas as IdeaWithUI[]);
     } catch (err) {
-      console.error('Error loading ideas:', err);
+      console.error('❌ Error loading ideas:', err);
       setError('Failed to load content ideas');
     } finally {
       setLoading(false);
@@ -250,8 +252,8 @@ const Ideation = () => {
 
       // Convert and save to database
       const ideaPromises = generatedIdeas.map(async (genIdea) => {
-        return contentIdeasService.create({
-          source: 'ai',
+        const ideaData = {
+          source: 'ai' as const,
           title: genIdea.title,
           description: genIdea.description,
           hook: genIdea.hook,
@@ -259,19 +261,30 @@ const Ideation = () => {
           target_audience: genIdea.targetAudience,
           content_format: genIdea.contentFormat,
           category: genIdea.category,
-          priority: genIdea.engagementScore >= 8 ? 'high' : genIdea.engagementScore >= 6 ? 'medium' : 'low',
-          status: 'ready',
+          priority: (genIdea.engagementScore >= 8 ? 'high' : genIdea.engagementScore >= 6 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+          status: 'ready' as const,
           score: genIdea.engagementScore,
           ai_model: 'gpt-5',
-          ai_reasoning_effort: aiGenerationOptions.mode === 'comprehensive' ? 'high' : 'medium',
+          ai_reasoning_effort: (aiGenerationOptions.mode === 'comprehensive' ? 'high' : 'medium') as 'high' | 'medium' | 'low',
           linkedin_style: genIdea.linkedInStyle,
           hashtags: genIdea.tags
-        });
+        };
+        
+        console.log('💾 Attempting to save idea:', genIdea.title);
+        const saved = await contentIdeasService.create(ideaData);
+        if (!saved) {
+          console.error('❌ Failed to save idea:', genIdea.title);
+        }
+        return saved;
       });
 
       const savedIdeas = await Promise.all(ideaPromises);
       const validIdeas = savedIdeas.filter(Boolean);
-      console.log('✅ Ideas saved:', validIdeas.length);
+      console.log('✅ Ideas saved:', validIdeas.length, 'out of', generatedIdeas.length);
+      
+      if (validIdeas.length === 0) {
+        throw new Error('Failed to save any ideas to database. Check console for details.');
+      }
       
       // Reload all ideas from database to ensure UI is in sync
       await loadIdeas();
