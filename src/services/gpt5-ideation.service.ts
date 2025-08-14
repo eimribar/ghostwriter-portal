@@ -304,14 +304,10 @@ function generateHookForStyle(topic: string, style: string): string {
 export class GPT5IdeationService {
   private apiKey: string;
   private model: string;
-  private defaultReasoningEffort: string;
-  private defaultVerbosity: string;
 
   constructor() {
     this.apiKey = apiConfig.openai.apiKey;
     this.model = apiConfig.openai.model;
-    this.defaultReasoningEffort = apiConfig.openai.reasoningEffort;
-    this.defaultVerbosity = apiConfig.openai.verbosity;
   }
 
   // Check if GPT-5 is configured
