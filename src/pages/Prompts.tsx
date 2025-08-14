@@ -92,10 +92,19 @@ const Prompts = () => {
   const handleSave = async () => {
     try {
       if (isEditing && selectedPrompt) {
-        console.log('Updating prompt with ID:', selectedPrompt.id);
-        console.log('Form data being sent:', formData);
+        console.log('🔧 Updating prompt with ID:', selectedPrompt.id);
+        console.log('📋 Form data being sent:', JSON.stringify(formData, null, 2));
         
-        const success = await promptTemplatesService.update(selectedPrompt.id, formData);
+        // Ensure all required fields are present
+        const updateData = {
+          ...selectedPrompt,  // Start with existing data
+          ...formData,        // Override with form changes
+          id: selectedPrompt.id,  // Ensure ID is preserved
+        };
+        
+        console.log('📦 Complete update data:', JSON.stringify(updateData, null, 2));
+        
+        const success = await promptTemplatesService.update(selectedPrompt.id, updateData);
         if (success) {
           console.log('✅ Prompt updated successfully');
           alert('Prompt updated successfully!');

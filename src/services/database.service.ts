@@ -1078,16 +1078,19 @@ export const promptTemplatesService = {
 
   async update(id: string, updates: Partial<PromptTemplate>): Promise<boolean> {
     if (!isSupabaseConfigured()) {
+      console.error('❌ Supabase not configured!');
+      alert('Database connection error: Supabase not configured');
       return false;
     }
     
-    // Remove id if it's in the updates to prevent conflicts
-    const { id: _, ...updateData } = updates as any;
+    // Remove id and any other read-only fields to prevent conflicts
+    const { id: _, created_at, updated_at, ...updateData } = updates as any;
     
     // Add updated_at timestamp
     updateData.updated_at = new Date().toISOString();
     
-    console.log('Updating prompt template:', id, 'with:', updateData);
+    console.log('🔄 Updating prompt template:', id);
+    console.log('📝 Update data:', JSON.stringify(updateData, null, 2));
     
     const { data, error } = await supabase
       .from('prompt_templates')
@@ -1096,12 +1099,18 @@ export const promptTemplatesService = {
       .select();
     
     if (error) {
-      console.error('Error updating prompt:', error);
-      console.error('Error details:', error.message, error.details);
+      console.error('❌ Supabase error updating prompt:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error details:', error.details);
+      console.error('Error hint:', error.hint);
+      
+      // Show more detailed error to user
+      alert(`Database error: ${error.message || 'Unknown error'}\n\nDetails: ${error.details || 'No details'}\n\nHint: ${error.hint || 'No hint'}`);
       return false;
     }
     
-    console.log('Prompt updated successfully:', data);
+    console.log('✅ Prompt updated successfully:', data);
     return true;
   },
 
