@@ -565,7 +565,7 @@ For each idea provide:
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.8,
-      max_tokens: 4000
+      max_completion_tokens: 4000  // GPT-5 uses max_completion_tokens, not max_tokens
     };
 
     if (tools && tools.length > 0) {
@@ -656,7 +656,7 @@ For each idea provide:
         model: this.model,
         messages,
         temperature: 0.8,
-        max_tokens: 4000
+        max_completion_tokens: 4000  // GPT-5 uses max_completion_tokens
       })
     });
 
