@@ -157,14 +157,21 @@ async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 104857
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 1048576, // 1 million tokens max for Gemini
-      },
-      // Add Google Search grounding for real-time information
-      tools: [
+      }
+    };
+    
+    // Add Google Search grounding for real-time information (controlled by env variable)
+    const enableGrounding = import.meta.env.VITE_ENABLE_GOOGLE_GROUNDING !== 'false';
+    if (enableGrounding) {
+      requestBody.tools = [
         {
           google_search: {}
         }
-      ]
-    };
+      ];
+      console.log('Google Grounding: ENABLED');
+    } else {
+      console.log('Google Grounding: DISABLED (manually turned off)');
+    }
     
     // Add systemInstruction if provided
     if (systemMessage) {

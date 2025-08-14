@@ -11,7 +11,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive CLAUDE.md documentation file with full technical specifications
 - CHANGELOG.md for tracking all major changes going forward
 
-## [2024.12.14] - 2024-12-14
+## [2024.12.14 - Part 2] - 2024-12-14 (Evening Update)
+
+### Added
+- **Google Grounding for Gemini API**
+  - Implemented `tools: [{ google_search: {} }]` in all API calls
+  - Enables real-time web search for factual accuracy
+  - Reduces hallucinations by grounding responses in current data
+  - Always enabled by default
+- **Gemini API Documentation**
+  - Created comprehensive GEMINI_API_GUIDE.md
+  - Documented configuration and best practices
+  - Added troubleshooting section
+
+### Changed
+- **Token Limits Increased**
+  - Updated from 1,000 to 1,048,576 tokens (over 1 million)
+  - Modified all API calls to use full Gemini capacity
+  - Updated default settings in prompt management
+  - Created `update_prompts_tokens.sql` to update existing prompts
+- **Prompt Update System**
+  - Added extensive debugging and logging
+  - Implemented force refresh after updates
+  - Added timestamp to force React re-renders
+  - Improved error handling and user feedback
+
+### Fixed
+- Prompt edit changes not saving properly
+- Added success/failure notifications for prompt updates
+- Removed version incrementing that was causing conflicts
+- Fixed form data persistence issues
+
+### Documentation
+- Updated CLAUDE.md with Gemini API details
+- Added Google Grounding configuration
+- Documented token limit increases
+- Added troubleshooting for prompt updates
+
+## [2024.12.14] - 2024-12-14 (Morning Update)
 
 ### Added
 - **Prompt Management System** - Complete CRUD interface for managing AI prompts

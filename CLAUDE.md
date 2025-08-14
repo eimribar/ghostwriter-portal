@@ -8,7 +8,7 @@
 - **Build Tool**: Vite 7.1.2
 - **Styling**: Tailwind CSS with custom zinc/black/white design system
 - **Database**: Supabase (PostgreSQL with Row Level Security)
-- **AI Integration**: Google Gemini 2.5 Pro API
+- **AI Integration**: Google Gemini 2.5 Pro API (1M+ tokens, Google Grounding enabled)
 - **Deployment**: Vercel
 - **State Management**: React Context API
 
@@ -66,7 +66,9 @@ VITE_APIFY_API_KEY=            # For LinkedIn scraping
 ## Key Features
 
 ### 1. Content Generation (`/generate`)
-- Uses Gemini 2.0 Flash Exp API (updated model)
+- Uses Google Gemini 2.5 Pro API exclusively
+- Max tokens: 1,048,576 (over 1 million tokens)
+- Google Grounding: ENABLED by default for real-time information
 - 4 LinkedIn prompt templates (RevOps, SaaStr, Sales Excellence, Data/Listicle)
 - Temperature: 1.5 for creativity
 - Auto-saves to database with status: 'draft'
@@ -276,6 +278,9 @@ npm run type-check
 - **User Portal Cleanup**: Removed ALL mock data (Amnon Cohen, mock posts)
 - **Database Improvements**: Made fields optional, fixed status enums
 - **4 LinkedIn Prompts**: Fully populated with actual content from linkedin-prompts.ts
+- **Google Grounding Added**: Real-time web search for factual accuracy (always on)
+- **Token Limit Increased**: From 1,000 to 1,048,576 tokens (1M+)
+- **Prompt Update Debugging**: Added extensive logging and force refresh
 
 ### Security Fixes
 - Removed all hardcoded API keys from codebase
