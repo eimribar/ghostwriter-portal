@@ -9,27 +9,40 @@ Vercel serverless functions (API routes) **cannot access VITE_ prefixed environm
 You must add these environment variables in the Vercel Dashboard:
 **Settings → Environment Variables**
 
-### Backend API Variables (WITHOUT VITE_ prefix):
+### Backend API Variables (WITHOUT VITE_ prefix) - REQUIRED:
 ```
-OPENAI_API_KEY=[Your OpenAI API key from .env.local]
-SUPABASE_URL=[Your Supabase URL from .env.local]
-SUPABASE_ANON_KEY=[Your Supabase anon key from .env.local]
-RESEND_API_KEY=[Your Resend API key from .env.local]
-ADMIN_EMAIL=[Your admin email from .env.local]
+OPENAI_API_KEY=(Get from .env.local - starts with sk-proj-)
+SUPABASE_URL=https://ifwscuvbtdokljwwbvex.supabase.co
+SUPABASE_ANON_KEY=(Get from .env.local - starts with eyJ)
+RESEND_API_KEY=(Get from .env.local - starts with re_)
+ADMIN_EMAIL=eimrib@yess.ai
 ```
 
-### Frontend Variables (WITH VITE_ prefix - already set):
+### Frontend Variables (WITH VITE_ prefix) - REQUIRED:
 ```
-VITE_OPENAI_API_KEY=[Same as OPENAI_API_KEY above]
-VITE_SUPABASE_URL=[Same as SUPABASE_URL above]
-VITE_SUPABASE_ANON_KEY=[Same as SUPABASE_ANON_KEY above]
-VITE_GOOGLE_API_KEY=[Your Google API key]
-VITE_RESEND_API_KEY=[Same as RESEND_API_KEY above]
-VITE_ADMIN_EMAIL=[Same as ADMIN_EMAIL above]
+VITE_OPENAI_API_KEY=(Same as OPENAI_API_KEY above)
+VITE_SUPABASE_URL=https://ifwscuvbtdokljwwbvex.supabase.co
+VITE_SUPABASE_ANON_KEY=(Same as SUPABASE_ANON_KEY above)
+VITE_GOOGLE_API_KEY=(Get from .env.local - starts with AIza)
+VITE_RESEND_API_KEY=(Same as RESEND_API_KEY above)
+VITE_ADMIN_EMAIL=eimrib@yess.ai
 VITE_ENV=production
 ```
 
-**Note**: Copy the actual values from your `.env.local` file when adding to Vercel.
+### Optional (Add both versions if using):
+```
+GOOGLE_API_KEY=(Same as VITE_GOOGLE_API_KEY)
+```
+
+## Quick Reference - All Keys Needed
+
+Get these from your `.env.local` file:
+1. **OpenAI API Key**: Starts with `sk-proj-`
+2. **Supabase URL**: `https://ifwscuvbtdokljwwbvex.supabase.co`
+3. **Supabase Anon Key**: Starts with `eyJ`
+4. **Google API Key**: Starts with `AIza`
+5. **Resend API Key**: Starts with `re_`
+6. **Admin Email**: `eimrib@yess.ai`
 
 ## How to Add in Vercel:
 
