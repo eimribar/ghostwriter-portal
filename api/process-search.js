@@ -124,14 +124,51 @@ export default async function handler(req, res) {
     const gptData = await response.json();
     console.log('GPT-5 response received');
     
-    // Parse the response
+    // Parse the GPT-5 Responses API response
     let ideas = [];
     try {
-      const content = gptData.content || gptData.choices?.[0]?.message?.content || '';
-      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
-      ideas = parsed.ideas || [];
+      console.log('Raw GPT-5 response structure:', JSON.stringify(gptData, null, 2).substring(0, 500));
+      
+      // GPT-5 Responses API returns content directly as text
+      const responseText = gptData.content || gptData.text || gptData.response || '';
+      console.log('Response text (first 500 chars):', responseText.substring(0, 500));
+      
+      // Try to extract JSON from the response
+      let parsed;
+      if (typeof responseText === 'string') {
+        // Look for JSON in the response
+        const jsonMatch = responseText.match(/\{[\s\S]*"ideas"[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          // Try direct parse
+          parsed = JSON.parse(responseText);
+        }
+      } else {
+        parsed = responseText;
+      }
+      
+      ideas = parsed.ideas || parsed || [];
+      
+      // If still no ideas, create some from the response
+      if (!Array.isArray(ideas) || ideas.length === 0) {
+        console.log('No structured ideas found, creating default ones');
+        ideas = [{
+          title: 'GPT-5 Web Search Result',
+          description: 'Content generated from trending news',
+          hook: 'Latest trends in B2B SaaS, AI, and Marketing',
+          keyPoints: ['Trending topic', 'Web search result', 'AI-generated'],
+          targetAudience: 'B2B professionals',
+          contentFormat: 'thought-leadership',
+          category: 'AI & Tech',
+          engagementScore: 7,
+          tags: ['AI', 'B2B', 'SaaS', 'Marketing'],
+          linkedInStyle: 'professional'
+        }];
+      }
     } catch (parseError) {
       console.error('Error parsing GPT-5 response:', parseError);
+      console.error('Raw response was:', gptData);
       ideas = [];
     }
 

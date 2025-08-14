@@ -64,12 +64,22 @@ export default async function handler(req, res) {
       });
     }
 
-    const data = JSON.parse(responseText);
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      data = { raw: responseText };
+    }
+    
+    // Log the structure for debugging
+    console.log('GPT-5 Response structure keys:', Object.keys(data));
+    console.log('Response content type:', typeof data.content);
     
     return res.status(200).json({ 
       success: true,
       message: 'GPT-5 API called successfully!',
-      response: data
+      response: data,
+      contentPreview: data.content ? data.content.substring(0, 500) : 'No content field'
     });
 
   } catch (error) {
