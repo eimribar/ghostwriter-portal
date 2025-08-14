@@ -24,7 +24,7 @@ const Prompts = () => {
     is_active: true,
     settings: {
       temperature: 1.5,
-      max_tokens: 1000,
+      max_tokens: 1048576,  // 1 million tokens for Gemini
       top_p: 0.95
     }
   });
@@ -85,15 +85,30 @@ const Prompts = () => {
   const handleSave = async () => {
     try {
       if (isEditing && selectedPrompt) {
-        await promptTemplatesService.update(selectedPrompt.id, formData);
+        const success = await promptTemplatesService.update(selectedPrompt.id, formData);
+        if (success) {
+          console.log('✅ Prompt updated successfully');
+          alert('Prompt updated successfully!');
+        } else {
+          alert('Failed to update prompt. Please try again.');
+          return;
+        }
       } else {
-        await promptTemplatesService.create(formData as Omit<PromptTemplate, 'id' | 'created_at' | 'updated_at'>);
+        const result = await promptTemplatesService.create(formData as Omit<PromptTemplate, 'id' | 'created_at' | 'updated_at'>);
+        if (result) {
+          console.log('✅ Prompt created successfully');
+          alert('Prompt created successfully!');
+        } else {
+          alert('Failed to create prompt. Please try again.');
+          return;
+        }
       }
       await loadPrompts();
       setShowCreateModal(false);
       setSelectedPrompt(null);
     } catch (error) {
       console.error('Error saving prompt:', error);
+      alert('An error occurred while saving the prompt.');
     }
   };
 

@@ -122,8 +122,8 @@ async function callAnthropic(prompt: string, temperature = 0.7, maxTokens = 1000
   }
 }
 
-// Google Gemini API call with optional system message
-async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1000, systemMessage?: string): Promise<GenerateContentResponse> {
+// Google Gemini API call with optional system message and Google Grounding
+async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1048576, systemMessage?: string): Promise<GenerateContentResponse> {
   if (!apiConfig.google.apiKey) {
     return {
       content: '[Google API key not configured - using mock response]\n\n' + generateMockContent(prompt),
@@ -133,7 +133,7 @@ async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1000, 
   }
 
   try {
-    console.log('Calling Gemini 2.5 Pro with:', {
+    console.log('Calling Gemini 2.5 Pro with Google Grounding:', {
       hasApiKey: !!apiConfig.google.apiKey,
       hasSystemMessage: !!systemMessage,
       promptLength: prompt.length,
@@ -156,8 +156,14 @@ async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1000, 
         temperature,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 65536,
+        maxOutputTokens: 1048576, // 1 million tokens max for Gemini
       },
+      // Add Google Search grounding for real-time information
+      tools: [
+        {
+          google_search: {}
+        }
+      ]
     };
     
     // Add systemInstruction if provided
@@ -291,7 +297,7 @@ export async function generateLinkedInVariations(
       callGoogle(
         contentIdea,
         1.5, // Temperature 1.5 for extreme creativity
-        8192, // Use full token capacity for LinkedIn posts
+        1048576, // Use full 1 million token capacity
         template.systemMessage
       )
     );
@@ -305,7 +311,7 @@ export async function generateLinkedInVariations(
         callGoogle(
           contentIdea,
           1.5, // Temperature 1.5
-          8192,
+          1048576, // 1 million tokens
           template.systemMessage
         )
       );

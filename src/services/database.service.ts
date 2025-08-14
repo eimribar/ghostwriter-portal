@@ -1076,23 +1076,27 @@ export const promptTemplatesService = {
       return false;
     }
     
-    // If updating, increment version and set parent_id
-    const currentPrompt = await this.getById(id);
-    if (currentPrompt) {
-      updates.version = (currentPrompt.version || 1) + 1;
-      updates.parent_id = id;
-    }
+    // Remove id if it's in the updates to prevent conflicts
+    const { id: _, ...updateData } = updates as any;
     
-    const { error } = await supabase
+    // Add updated_at timestamp
+    updateData.updated_at = new Date().toISOString();
+    
+    console.log('Updating prompt template:', id, 'with:', updateData);
+    
+    const { data, error } = await supabase
       .from('prompt_templates')
-      .update(updates)
-      .eq('id', id);
+      .update(updateData)
+      .eq('id', id)
+      .select();
     
     if (error) {
       console.error('Error updating prompt:', error);
+      console.error('Error details:', error.message, error.details);
       return false;
     }
     
+    console.log('Prompt updated successfully:', data);
     return true;
   },
 

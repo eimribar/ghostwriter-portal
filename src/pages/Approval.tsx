@@ -54,11 +54,13 @@ const Approval = () => {
       });
       
       console.log('Update success:', success);
+      console.log('✅ Content status changed to admin_approved');
+      console.log('This content should now appear in User Portal at /approve');
       
       if (success) {
         // Refresh the list
         await loadContent();
-        alert('Content approved! Status changed to admin_approved');
+        alert('Content approved! Status changed to admin_approved.\n\nThis content will now appear in the User Portal for client approval.');
       } else {
         alert('Failed to approve content. Check console for errors.');
       }
