@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { generateLinkedInVariations } from '../lib/llm-service';
-import { generatedContentService, clientsService, type Client } from '../services/database.service';
+import { generateLinkedInVariations, generateWithPrompt } from '../lib/llm-service';
+import { generatedContentService, clientsService, promptTemplatesService, type Client, type PromptTemplate } from '../services/database.service';
 // import { useAuth } from '../contexts/AuthContext'; // Not using auth for now
 
 interface GeneratedVariation {
@@ -26,9 +26,14 @@ const Generate = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [loadingClients, setLoadingClients] = useState(true);
+  const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
+  const [selectedPrompt, setSelectedPrompt] = useState<string>('');
+  const [showPromptDetails, setShowPromptDetails] = useState(false);
+  const [useCustomPrompts, setUseCustomPrompts] = useState(true);
 
   useEffect(() => {
     loadClients();
+    loadPrompts();
   }, []);
 
   const loadClients = async () => {
@@ -42,22 +47,60 @@ const Generate = () => {
     }
   };
 
+  const loadPrompts = async () => {
+    try {
+      const promptsList = await promptTemplatesService.getAll();
+      // Filter for Content Generation prompts only
+      const contentPrompts = promptsList.filter(p => 
+        p.category === 'Content Generation' && p.is_active
+      );
+      setPrompts(contentPrompts);
+      
+      // Select first prompt by default
+      if (contentPrompts.length > 0) {
+        setSelectedPrompt(contentPrompts[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading prompts:', error);
+      // Fall back to hardcoded prompts
+      setUseCustomPrompts(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!contentIdea.trim()) {
       alert('Please enter a content idea');
       return;
     }
 
+    if (useCustomPrompts && !selectedPrompt) {
+      alert('Please select a prompt template');
+      return;
+    }
+
     console.log('Starting generation for:', contentIdea);
-    console.log('API Key configured:', !!import.meta.env.VITE_GOOGLE_API_KEY);
-    console.log('API Key first 10 chars:', import.meta.env.VITE_GOOGLE_API_KEY?.substring(0, 10));
-    console.log('All env vars:', Object.keys(import.meta.env));
+    console.log('Using custom prompts:', useCustomPrompts);
+    console.log('Selected prompt:', selectedPrompt);
 
     setGenerating(true);
     
     try {
-      // Generate variations using real LLM APIs with different LinkedIn prompt templates
-      const results = await generateLinkedInVariations(contentIdea, 4);
+      let results;
+      
+      if (useCustomPrompts && selectedPrompt) {
+        // Use selected prompt from database
+        const prompt = prompts.find(p => p.id === selectedPrompt);
+        if (prompt) {
+          // Generate variations using the selected prompt
+          results = await generateWithPrompt(contentIdea, prompt, 4);
+        } else {
+          // Fallback to hardcoded prompts
+          results = await generateLinkedInVariations(contentIdea, 4);
+        }
+      } else {
+        // Use hardcoded LinkedIn prompt templates
+        results = await generateLinkedInVariations(contentIdea, 4);
+      }
       
       const newVariations: GeneratedVariation[] = results.map((result, index) => {
         // Extract hashtags from the content
@@ -203,6 +246,79 @@ const Generate = () => {
               </div>
             )}
 
+            {/* Prompt Template Selection */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                  <Settings className="w-4 h-4" />
+                  Prompt Template
+                </label>
+                <button
+                  onClick={() => setUseCustomPrompts(!useCustomPrompts)}
+                  className="text-xs text-zinc-600 hover:text-zinc-900 underline"
+                >
+                  {useCustomPrompts ? 'Use Default Prompts' : 'Use Custom Prompts'}
+                </button>
+              </div>
+              
+              {useCustomPrompts ? (
+                <>
+                  <select
+                    value={selectedPrompt}
+                    onChange={(e) => {
+                      setSelectedPrompt(e.target.value);
+                      setShowPromptDetails(false);
+                    }}
+                    className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                    disabled={prompts.length === 0}
+                  >
+                    {prompts.length === 0 ? (
+                      <option value="">No prompts available - using defaults</option>
+                    ) : (
+                      <>
+                        <option value="">Select a prompt template...</option>
+                        {prompts.map((prompt) => (
+                          <option key={prompt.id} value={prompt.id}>
+                            {prompt.name} {prompt.description ? `- ${prompt.description}` : ''}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                  
+                  {selectedPrompt && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        onClick={() => setShowPromptDetails(!showPromptDetails)}
+                        className="text-xs text-zinc-600 hover:text-zinc-900 underline"
+                      >
+                        {showPromptDetails ? 'Hide' : 'Show'} Prompt Details
+                      </button>
+                      <a
+                        href="/prompts"
+                        target="_blank"
+                        className="text-xs text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Edit Prompts
+                      </a>
+                    </div>
+                  )}
+                  
+                  {showPromptDetails && selectedPrompt && (
+                    <div className="mt-3 p-3 bg-zinc-50 rounded-lg">
+                      <pre className="text-xs text-zinc-600 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                        {prompts.find(p => p.id === selectedPrompt)?.system_message}
+                      </pre>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-3 bg-zinc-50 rounded-lg text-sm text-zinc-600">
+                  Using default LinkedIn prompt templates (RevOps, SaaStr, Sales, Data)
+                </div>
+              )}
+            </div>
+
             {/* Content Idea Input */}
             <div className="mb-6">
               <label className="text-sm font-medium text-zinc-700 mb-2 block">
@@ -216,7 +332,7 @@ const Generate = () => {
                 className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"
               />
               <p className="text-sm text-zinc-500 mt-2">
-                Just describe what you want to write about. Our AI will create 4 different variations using various LinkedIn writing styles.
+                Just describe what you want to write about. Our AI will create 4 different variations.
               </p>
             </div>
 

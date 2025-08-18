@@ -1,5 +1,6 @@
 import { apiConfig } from './api-config';
 import { linkedinPromptTemplates } from './linkedin-prompts';
+import type { PromptTemplate } from '../services/database.service';
 
 export interface GenerateContentRequest {
   prompt: string;
@@ -320,6 +321,69 @@ export async function generateLinkedInVariations(
           1.5, // Temperature 1.5
           1048576, // 1 million tokens
           template.systemMessage
+        )
+      );
+    }
+  }
+  
+  return Promise.all(variations);
+}
+
+// Generate content using a custom prompt template from database
+export async function generateWithPrompt(
+  contentIdea: string,
+  promptTemplate: PromptTemplate,
+  count: number = 4
+): Promise<GenerateContentResponse[]> {
+  console.log('Generating with custom prompt:', promptTemplate.name);
+  console.log('Provider:', promptTemplate.provider);
+  console.log('Temperature:', promptTemplate.settings?.temperature);
+  console.log('Max Tokens:', promptTemplate.settings?.max_tokens);
+  
+  const variations: Promise<GenerateContentResponse>[] = [];
+  
+  // Generate variations using the same prompt template but with slight variations
+  for (let i = 0; i < count; i++) {
+    const temperature = (promptTemplate.settings?.temperature || 1.5) + (i * 0.1); // Slight temperature variation
+    const maxTokens = promptTemplate.settings?.max_tokens || 1048576;
+    
+    if (promptTemplate.provider === 'google') {
+      variations.push(
+        callGoogle(
+          contentIdea,
+          temperature,
+          maxTokens,
+          promptTemplate.system_message
+        )
+      );
+    } else if (promptTemplate.provider === 'openai') {
+      // For OpenAI, we need to format the prompt differently
+      const fullPrompt = `${promptTemplate.system_message}\n\nContent Idea: ${contentIdea}`;
+      variations.push(
+        callOpenAI(
+          fullPrompt,
+          temperature,
+          maxTokens
+        )
+      );
+    } else if (promptTemplate.provider === 'anthropic') {
+      // For Anthropic, we need to format the prompt differently
+      const fullPrompt = `${promptTemplate.system_message}\n\nContent Idea: ${contentIdea}`;
+      variations.push(
+        callAnthropic(
+          fullPrompt,
+          temperature,
+          maxTokens
+        )
+      );
+    } else {
+      // Default to Google/Gemini
+      variations.push(
+        callGoogle(
+          contentIdea,
+          temperature,
+          maxTokens,
+          promptTemplate.system_message
         )
       );
     }
