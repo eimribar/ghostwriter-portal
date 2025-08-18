@@ -171,15 +171,15 @@ const SlackSettings = () => {
       const workspace = workspaces.find(ws => ws.id === newChannel.workspace_id);
       if (!workspace) throw new Error('Workspace not found');
       
-      // Verify channel exists in Slack
-      const channelInfo = await slackService.getChannelInfo(
-        workspace.bot_token,
-        newChannel.channel_id
-      );
+      // Skip Slack verification to avoid CORS issues
+      // The channel will be verified during the first sync
+      console.log('📢 Adding channel without verification (will verify on first sync)');
       
-      if (!channelInfo) {
-        throw new Error('Channel not found in Slack');
-      }
+      // Determine channel type based on ID prefix
+      // C = public channel, G = private group, D = direct message
+      const channelType = newChannel.channel_id.startsWith('C') ? 'public' : 
+                         newChannel.channel_id.startsWith('G') ? 'private' : 
+                         newChannel.channel_id.startsWith('D') ? 'dm' : 'public';
       
       // Save channel
       const { data: channel, error } = await supabase
@@ -187,8 +187,8 @@ const SlackSettings = () => {
         .insert([{
           workspace_id: newChannel.workspace_id,
           channel_id: newChannel.channel_id,
-          channel_name: channelInfo.name || newChannel.channel_name,
-          channel_type: channelInfo.is_private ? 'private' : 'public',
+          channel_name: newChannel.channel_name,
+          channel_type: channelType,
           is_active: true,
           sync_enabled: true,
           sync_frequency: newChannel.sync_frequency,
@@ -197,8 +197,12 @@ const SlackSettings = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw new Error(`Failed to save channel: ${error.message}`);
+      }
       
+      console.log('✅ Channel added successfully:', channel);
       setChannels([...channels, channel]);
       setShowAddChannel(false);
       setNewChannel({
@@ -208,10 +212,11 @@ const SlackSettings = () => {
         sync_frequency: 'daily',
         auto_approve: false
       });
+      setError(null); // Clear any previous errors
       
     } catch (err: any) {
-      console.error('Error adding channel:', err);
-      setError(err.message || 'Failed to add channel');
+      console.error('❌ Error adding channel:', err);
+      setError(err.message || 'Failed to add channel. Please check the channel ID.');
     }
   };
 
@@ -554,6 +559,12 @@ const SlackSettings = () => {
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-zinc-900 mb-4">Add Slack Channel</h2>
             
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-1">Workspace</label>
@@ -623,7 +634,10 @@ const SlackSettings = () => {
             
             <div className="flex gap-2 mt-6">
               <button
-                onClick={() => setShowAddChannel(false)}
+                onClick={() => {
+                  setShowAddChannel(false);
+                  setError(null);
+                }}
                 className="flex-1 px-4 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
               >
                 Cancel
