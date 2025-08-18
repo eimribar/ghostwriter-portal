@@ -4,15 +4,15 @@ import {
   Plus, 
   Sparkles, 
   MessageSquare, 
-  Newspaper, 
   Edit3,
-  Trash2,
-  ChevronRight,
   X,
   Loader2,
   AlertCircle,
   ExternalLink,
-  Clock
+  TrendingUp,
+  ArrowRight,
+  Clock,
+  Trash2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
@@ -31,7 +31,7 @@ const Ideation = () => {
   const [activeJobs, setActiveJobs] = useState<SearchJob[]>([]);
   const [showNewIdeaModal, setShowNewIdeaModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['trending', 'ai', 'slack', 'manual']));
+  const [activeFilter, setActiveFilter] = useState<string>('all');
 
   // Load ideas on mount
   useEffect(() => {
@@ -113,15 +113,6 @@ const Ideation = () => {
     }
   };
 
-  const toggleSection = (section: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section);
-    } else {
-      newExpanded.add(section);
-    }
-    setExpandedSections(newExpanded);
-  };
 
   const formatDate = (date: string | Date) => {
     const d = new Date(date);
@@ -136,93 +127,67 @@ const Ideation = () => {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Group ideas by source
-  const groupedIdeas = ideas.reduce((acc, idea) => {
-    const source = idea.source || 'manual';
-    if (!acc[source]) acc[source] = [];
-    acc[source].push(idea);
-    return acc;
-  }, {} as Record<string, IdeaWithUI[]>);
-
-  // Filter ideas based on search
-  const filterIdeas = (ideas: IdeaWithUI[]) => {
-    if (!searchQuery) return ideas;
-    const query = searchQuery.toLowerCase();
-    return ideas.filter(idea => 
-      idea.title.toLowerCase().includes(query) ||
-      idea.description?.toLowerCase().includes(query)
-    );
-  };
-
-  const sourceConfig = {
-    trending: {
-      label: 'News & Trends',
-      icon: Newspaper,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
-    },
-    ai: {
-      label: 'AI Generated',
-      icon: Sparkles,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200'
-    },
-    slack: {
-      label: 'Slack Ideas',
-      icon: MessageSquare,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200'
-    },
-    manual: {
-      label: 'Manual Ideas',
-      icon: Edit3,
-      color: 'text-zinc-600',
-      bgColor: 'bg-zinc-50',
-      borderColor: 'border-zinc-200'
+  // Filter ideas based on search and active filter
+  const filteredIdeas = ideas.filter(idea => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        idea.title.toLowerCase().includes(query) ||
+        idea.description?.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
     }
+    
+    // Source filter
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'news' && idea.source === 'ai' && idea.ai_model === 'gpt-5') return true;
+    if (activeFilter === 'ai' && idea.source === 'ai' && idea.ai_model !== 'gpt-5') return true;
+    if (activeFilter === 'slack' && idea.source === 'slack') return true;
+    return false;
+  });
+
+  const getSourceBadge = (idea: ContentIdeaDB) => {
+    if (idea.source === 'ai' && idea.ai_model === 'gpt-5') {
+      return { label: 'News', icon: TrendingUp, color: 'bg-blue-500' };
+    }
+    if (idea.source === 'ai') {
+      return { label: 'AI', icon: Sparkles, color: 'bg-purple-500' };
+    }
+    if (idea.source === 'slack') {
+      return { label: 'Slack', icon: MessageSquare, color: 'bg-green-500' };
+    }
+    return { label: 'Manual', icon: Edit3, color: 'bg-gray-500' };
   };
+
+  const filterOptions = [
+    { value: 'all', label: 'All Ideas', count: ideas.length },
+    { value: 'news', label: 'News & Trends', count: ideas.filter(i => i.source === 'ai' && i.ai_model === 'gpt-5').length },
+    { value: 'ai', label: 'AI Generated', count: ideas.filter(i => i.source === 'ai' && i.ai_model !== 'gpt-5').length },
+    { value: 'slack', label: 'Slack', count: ideas.filter(i => i.source === 'slack').length }
+  ];
 
   return (
-    <div className="flex-1 bg-white">
+    <div className="flex-1 bg-gray-50">
       {/* Header */}
-      <div className="border-b border-zinc-200">
-        <div className="p-6">
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-8 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-zinc-900">Content Ideation</h1>
-              <p className="text-sm text-zinc-500 mt-1">Organize and manage your content ideas</p>
+              <h1 className="text-3xl font-bold text-gray-900">Content Ideas</h1>
+              <p className="text-sm text-gray-500 mt-1">Discover and manage your content pipeline</p>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {activeJobs.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                  <span className="text-sm text-blue-700">{activeJobs.length} active searches</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-full">
+                  <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+                  <span className="text-xs font-medium text-blue-700">{activeJobs.length} searching</span>
                 </div>
               )}
               
               <button
-                onClick={() => console.log('News & Trends clicked')}
-                className="flex items-center gap-2 px-4 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
-              >
-                <Newspaper className="h-4 w-4" />
-                News & Trends
-              </button>
-              
-              <button
                 onClick={() => console.log('Generate AI Ideas clicked')}
-                className="flex items-center gap-2 px-4 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
-              >
-                <Sparkles className="h-4 w-4" />
-                Generate AI Ideas
-              </button>
-              
-              <button
-                onClick={() => setShowNewIdeaModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all font-medium text-sm"
               >
                 <Plus className="h-4 w-4" />
                 New Idea
@@ -230,121 +195,123 @@ const Ideation = () => {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative max-w-xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-            <input
-              type="text"
-              placeholder="Search ideas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
-            />
+          {/* Search and Filters */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search ideas..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-900 focus:bg-white transition-all text-sm"
+              />
+            </div>
+            
+            {/* Filter Pills */}
+            <div className="flex items-center gap-2">
+              {filterOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setActiveFilter(option.value)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    activeFilter === option.value 
+                      ? "bg-gray-900 text-white" 
+                      : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  )}
+                >
+                  {option.label}
+                  {option.count > 0 && (
+                    <span className={cn(
+                      "ml-2 text-xs",
+                      activeFilter === option.value ? "text-gray-300" : "text-gray-400"
+                    )}>
+                      {option.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className="p-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
-        ) : ideas.length === 0 ? (
+        ) : filteredIdeas.length === 0 ? (
           <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-zinc-100 rounded-full mb-4">
-              <Search className="h-8 w-8 text-zinc-400" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+              <Search className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-zinc-900 mb-2">No ideas yet</h3>
-            <p className="text-zinc-500 mb-6">Start by generating AI ideas or creating your own</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No ideas found</h3>
+            <p className="text-gray-500 mb-6">
+              {searchQuery ? 'Try adjusting your search' : 'Start by generating AI ideas or creating your own'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            {/* Grouped Sections */}
-            {['trending', 'ai', 'slack', 'manual'].map(source => {
-              const sourceIdeas = filterIdeas(groupedIdeas[source] || []);
-              const config = sourceConfig[source as keyof typeof sourceConfig];
-              const Icon = config.icon;
-              const isExpanded = expandedSections.has(source);
-              
-              if (sourceIdeas.length === 0) return null;
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredIdeas.map(idea => {
+              const badge = getSourceBadge(idea);
+              const Icon = badge.icon;
               
               return (
-                <div key={source} className={cn("rounded-xl border", config.borderColor)}>
-                  {/* Section Header */}
-                  <button
-                    onClick={() => toggleSection(source)}
-                    className={cn(
-                      "w-full px-4 py-3 flex items-center justify-between",
-                      config.bgColor,
-                      "hover:opacity-90 transition-opacity rounded-t-xl"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className={cn("h-5 w-5", config.color)} />
-                      <span className={cn("font-semibold", config.color)}>
-                        {config.label}
-                      </span>
-                      <span className={cn("text-sm px-2 py-0.5 rounded-full bg-white", config.color)}>
-                        {sourceIdeas.length}
-                      </span>
+                <div
+                  key={idea.id}
+                  className="group bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer border border-gray-100 hover:border-gray-200"
+                  onClick={() => setSelectedIdea(idea)}
+                >
+                  {/* Card Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-xs font-medium",
+                      badge.color
+                    )}>
+                      <Icon className="h-3 w-3" />
+                      {badge.label}
                     </div>
-                    <ChevronRight className={cn(
-                      "h-4 w-4 transition-transform",
-                      config.color,
-                      isExpanded && "rotate-90"
-                    )} />
-                  </button>
+                    
+                    <button
+                      onClick={(e) => handleDeleteIdea(idea.id, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded-lg transition-all"
+                      title="Delete idea"
+                    >
+                      <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                    </button>
+                  </div>
                   
-                  {/* Section Content */}
-                  {isExpanded && (
-                    <div className="divide-y divide-zinc-100">
-                      {sourceIdeas.map(idea => (
-                        <div
-                          key={idea.id}
-                          className="px-4 py-3 hover:bg-zinc-50 transition-colors cursor-pointer group"
-                          onClick={() => setSelectedIdea(idea)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-zinc-900 mb-1">
-                                {idea.title}
-                              </h3>
-                              <p className="text-sm text-zinc-600 line-clamp-1">
-                                {idea.description}
-                              </p>
-                              <div className="flex items-center gap-3 mt-2 text-xs text-zinc-500">
-                                {idea.slack_user_name && (
-                                  <>
-                                    <span>{idea.slack_user_name}</span>
-                                    <span>•</span>
-                                  </>
-                                )}
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {formatDate(idea.created_at)}
-                                </span>
-                                {idea.priority === 'high' && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="text-red-600 font-medium">High Priority</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 ml-4">
-                              <button
-                                onClick={(e) => handleDeleteIdea(idea.id, e)}
-                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-zinc-200 rounded transition-all"
-                              >
-                                <Trash2 className="h-4 w-4 text-zinc-500" />
-                              </button>
-                              <ChevronRight className="h-4 w-4 text-zinc-400" />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  {/* Card Content */}
+                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-gray-700 transition-colors">
+                    {idea.title}
+                  </h3>
+                  
+                  <p className="text-sm text-gray-600 line-clamp-3 mb-4">
+                    {idea.description}
+                  </p>
+                  
+                  {/* Card Footer */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      {idea.slack_user_name && (
+                        <span className="font-medium">{idea.slack_user_name}</span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{formatDate(idea.created_at)}</span>
+                      </div>
+                    </div>
+                    
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+                  </div>
+                  
+                  {/* Priority Badge */}
+                  {idea.priority === 'high' && (
+                    <div className="absolute top-0 right-0 mt-3 mr-3">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                     </div>
                   )}
                 </div>
