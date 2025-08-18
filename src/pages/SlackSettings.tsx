@@ -224,18 +224,54 @@ const SlackSettings = () => {
     setError(null);
     
     try {
-      const result = await slackSyncService.syncChannel(channelId);
+      // Determine API URL based on environment
+      const apiUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5173/api/slack-sync'
+        : '/api/slack-sync';
       
-      if (result.success) {
-        // Reload channels to show updated sync time
-        await loadWorkspacesAndChannels();
-        console.log(`Sync successful: ${result.ideasCreated} ideas created`);
-      } else {
-        throw new Error(result.errors.join(', '));
+      console.log('🔄 Starting sync via API...');
+      
+      // Call our backend API to sync the channel
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          channelId: channelId
+        })
+      });
+      
+      const result = await response.json();
+      console.log('📊 Sync response:', result);
+      
+      if (!result.success) {
+        // Provide detailed error message
+        let errorMessage = result.error || result.details || 'Sync failed';
+        
+        // Check for specific error types
+        if (result.details === 'not_in_channel' || errorMessage.includes('not in channel')) {
+          errorMessage = result.error; // Use the detailed instructions from backend
+        }
+        
+        throw new Error(errorMessage);
       }
+      
+      // Reload channels to show updated sync time
+      await loadWorkspacesAndChannels();
+      
+      // Show success message
+      console.log(`✅ Sync successful: ${result.ideasCreated} ideas created from ${result.messagesProcessed} messages`);
+      
+      // Optionally show a success notification (you can remove this if you don't want it)
+      if (result.ideasCreated > 0) {
+        setError(null); // Clear any errors
+        // You could set a success message here if you add a success state
+      }
+      
     } catch (err: any) {
-      console.error('Error syncing channel:', err);
-      setError(`Sync failed: ${err.message}`);
+      console.error('❌ Error syncing channel:', err);
+      setError(err.message || 'Failed to sync channel. Please check your configuration.');
     } finally {
       setSyncing(null);
     }
