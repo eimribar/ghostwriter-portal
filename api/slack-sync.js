@@ -214,13 +214,40 @@ export default async function handler(req, res) {
       }
       
       // Skip messages without text or very short messages
-      if (!message.text || message.text.trim().length < 30) {
+      if (!message.text || message.text.trim().length < 50) {
+        console.log(`⏭️ Skipping short message: "${message.text?.substring(0, 50)}"`);
         continue;
       }
       
-      // Skip messages that are just URLs or mentions
       const trimmedText = message.text.trim();
-      if (trimmedText.match(/^<@[A-Z0-9]+>$/) || trimmedText.match(/^<https?:\/\/[^\s]+>$/)) {
+      
+      // CRITICAL: Skip ALL system-like messages
+      const systemPatterns = [
+        /has joined the channel/i,
+        /has left the channel/i,
+        /has renamed the channel/i,
+        /^<@[A-Z0-9]+>$/,  // Just a user mention
+        /^<https?:\/\/[^\s]+>$/,  // Just a URL
+        /^<@[A-Z0-9]+> has/i,  // User has done something
+        /channel purpose:/i,
+        /channel topic:/i,
+        /set the channel/i,
+        /archived the channel/i,
+        /created the channel/i,
+        /invited .* to the channel/i,
+        /removed .* from the channel/i
+      ];
+      
+      // Check if message matches any system pattern
+      const isSystemMessage = systemPatterns.some(pattern => trimmedText.match(pattern));
+      if (isSystemMessage) {
+        console.log(`⚠️ BLOCKING SYSTEM MESSAGE: "${trimmedText.substring(0, 100)}"`);
+        continue;
+      }
+      
+      // Additional check: Skip if the entire message is just user IDs
+      if (trimmedText.match(/^(<@[A-Z0-9]+>\s*)+$/)) {
+        console.log(`⏭️ Skipping user mention only message`);
         continue;
       }
 
@@ -348,11 +375,28 @@ export default async function handler(req, res) {
 
 // Helper function to parse message into idea
 function parseMessageToIdea(text, channel) {
-  if (!text || text.trim().length < 30) {
+  if (!text || text.trim().length < 50) {
     return null;
   }
 
   const trimmedText = text.trim();
+  
+  // FINAL CHECK: Never create ideas from system-like messages
+  const blockedPhrases = [
+    'has joined the channel',
+    'has left the channel', 
+    'has renamed the channel',
+    'was added to',
+    'was removed from'
+  ];
+  
+  const lowerText = trimmedText.toLowerCase();
+  for (const phrase of blockedPhrases) {
+    if (lowerText.includes(phrase)) {
+      console.log(`🚫 Blocked idea creation for system message: "${trimmedText.substring(0, 50)}..."`);
+      return null;
+    }
+  }
   
   // Check if message is likely a content idea
   const ideaKeywords = [
