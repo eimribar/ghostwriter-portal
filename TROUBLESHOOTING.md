@@ -2,6 +2,46 @@
 
 ## Common Issues and Solutions
 
+### 🔴 NEW: Slack System Messages Appearing as Ideas
+
+#### Symptoms:
+- "has joined the channel" messages showing in Ideation
+- "set the channel topic" appearing as content ideas
+- Other Slack system messages cluttering the UI
+
+#### Solution:
+1. Run the cleanup SQL script in Supabase:
+   ```sql
+   -- cleanup_junk_ideas.sql
+   DELETE FROM content_ideas 
+   WHERE content ILIKE '%has joined the channel%'
+      OR content ILIKE '%has left the channel%'
+      OR content ILIKE '%set the channel topic%'
+      OR content ILIKE '%set the channel description%'
+      OR content ILIKE '%renamed the channel%';
+   ```
+2. Backend filtering is now in place in `/api/slack-sync.js`
+3. Frontend filtering added in `/src/pages/Ideation.tsx`
+
+---
+
+### 🔴 NEW: Prompts Not Saving or Applying
+
+#### Symptoms:
+- Changes to prompts in UI not being saved
+- Prompts not affecting content generation
+- Default prompts used instead of custom ones
+
+#### Solution:
+1. Ensure you're selecting a prompt from the dropdown in Generate page
+2. Click "Edit Prompts" link to modify prompts
+3. Prompts are now immediately applied without restart
+4. Check that prompt category is "Content Generation" to appear in dropdown
+
+---
+
+## Common Issues and Solutions
+
 ### 🔴 Critical Issue: GPT-5 API Not Being Called
 
 #### Symptoms:
