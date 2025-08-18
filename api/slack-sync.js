@@ -71,6 +71,9 @@ export default async function handler(req, res) {
 
     console.log(`📊 Fetching messages from Slack channel: ${channel.channel_name}`);
 
+    // First, check if the channel is private and we need different permissions
+    const isPrivateChannel = channel.channel_type === 'private' || channel.channel_id.startsWith('G');
+    
     // Fetch messages from Slack API
     const slackParams = new URLSearchParams({
       channel: channel.channel_id,
@@ -81,7 +84,7 @@ export default async function handler(req, res) {
       slackParams.append('oldest', channel.last_message_timestamp);
     }
 
-    console.log(`📡 Calling Slack API for channel ${channel.channel_id} with token: xoxb-${workspace.bot_token?.substring(5, 15)}...`);
+    console.log(`📡 Calling Slack API for ${isPrivateChannel ? 'private' : 'public'} channel ${channel.channel_id} with token: xoxb-${workspace.bot_token?.substring(5, 15)}...`);
 
     const slackResponse = await fetch(
       `https://slack.com/api/conversations.history?${slackParams}`,
@@ -116,7 +119,12 @@ export default async function handler(req, res) {
       } else if (slackData.error === 'invalid_auth') {
         errorMessage = 'Invalid bot token. Please reconfigure the workspace';
       } else if (slackData.error === 'missing_scope') {
-        errorMessage = 'Bot token missing required permissions. Please ensure your bot has channels:history and channels:read scopes';
+        // Check if it's a private channel issue
+        if (isPrivateChannel) {
+          errorMessage = 'Bot needs additional permissions for private channels. Please add groups:history and groups:read scopes to your bot token, then reinstall the app.';
+        } else {
+          errorMessage = 'Bot token missing required permissions. Please ensure your bot has channels:history and channels:read scopes';
+        }
       }
       
       return res.status(400).json({ 
