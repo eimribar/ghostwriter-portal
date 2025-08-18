@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe, Mail, CheckCircle, MessageSquare, ExternalLink, Trash2 } from 'lucide-react';
+import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe, Mail, CheckCircle, MessageSquare, ExternalLink } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
 import { gpt5ResponsesService } from '../services/gpt5-responses.service';
