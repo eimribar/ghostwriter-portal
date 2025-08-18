@@ -167,36 +167,36 @@ async function callGoogle(
       }
     };
     
-    // Build tools array based on enabled features
+    // Always enable both URL Context and Google Grounding for best results
     const tools = [];
     
-    // Add URL Context if URLs are provided
+    // Always add URL Context tool
+    tools.push({
+      url_context: {}
+    });
+    
+    // If URLs are explicitly provided, add them to the prompt
     if (urls && urls.length > 0) {
-      tools.push({
-        url_context: {}
-      });
-      console.log(`URL Context: ENABLED with ${urls.length} URLs`);
-      
-      // Modify the prompt to include URLs
+      console.log(`URL Context: ENABLED with ${urls.length} explicitly provided URLs`);
       const urlsText = urls.join('\n');
       requestBody.contents[0].parts[0].text = `${prompt}\n\nReference URLs:\n${urlsText}`;
+    } else {
+      console.log('URL Context: ENABLED (will auto-detect URLs from prompt)');
     }
     
-    // Add Google Search grounding for real-time information (controlled by env variable)
-    const enableGrounding = import.meta.env.VITE_ENABLE_GOOGLE_GROUNDING !== 'false';
-    if (enableGrounding) {
+    // Always add Google Search grounding unless explicitly disabled
+    const disableGrounding = import.meta.env.VITE_ENABLE_GOOGLE_GROUNDING === 'false';
+    if (!disableGrounding) {
       tools.push({
         google_search: {}
       });
       console.log('Google Grounding: ENABLED');
     } else {
-      console.log('Google Grounding: DISABLED (manually turned off)');
+      console.log('Google Grounding: DISABLED (manually turned off via env)');
     }
     
-    // Add tools to request if any are enabled
-    if (tools.length > 0) {
-      requestBody.tools = tools;
-    }
+    // Always add tools to the request
+    requestBody.tools = tools;
     
     // Add systemInstruction if provided
     if (systemMessage) {

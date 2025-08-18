@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Link, Globe } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations, generateWithPrompt } from '../lib/llm-service';
 import { generatedContentService, clientsService, promptTemplatesService, type Client, type PromptTemplate } from '../services/database.service';
@@ -17,8 +17,6 @@ interface GeneratedVariation {
 const Generate = () => {
   // const { user } = useAuth(); // Commented out - not using user for now
   const [contentIdea, setContentIdea] = useState('');
-  const [referenceUrls, setReferenceUrls] = useState('');
-  const [useUrlContext, setUseUrlContext] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [variations, setVariations] = useState<GeneratedVariation[]>([]);
@@ -83,13 +81,18 @@ const Generate = () => {
     console.log('Starting generation for:', contentIdea);
     console.log('Using custom prompts:', useCustomPrompts);
     console.log('Selected prompt:', selectedPrompt);
-    console.log('Using URL context:', useUrlContext);
-    console.log('Reference URLs:', referenceUrls);
 
-    // Parse URLs from the input (one per line)
-    const urls = useUrlContext && referenceUrls 
-      ? referenceUrls.split('\n').map(url => url.trim()).filter(url => url.length > 0)
-      : [];
+    // Auto-extract URLs from the content idea text
+    const extractUrls = (text: string): string[] => {
+      // Match various URL patterns including those in parentheses or brackets
+      const urlRegex = /https?:\/\/[^\s\)>\]]+/gi;
+      const matches = text.match(urlRegex) || [];
+      // Clean up URLs (remove trailing punctuation)
+      return matches.map(url => url.replace(/[.,;:!?]+$/, ''));
+    };
+
+    const urls = extractUrls(contentIdea);
+    console.log('Auto-extracted URLs:', urls);
 
     setGenerating(true);
     
@@ -340,58 +343,19 @@ const Generate = () => {
                 rows={6}
                 className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"
               />
-              <p className="text-sm text-zinc-500 mt-2">
-                Just describe what you want to write about. Our AI will create 4 different variations.
-              </p>
+              <div className="mt-2 space-y-1">
+                <p className="text-sm text-zinc-500">
+                  Just paste your content idea or article summary. URLs will be automatically detected and analyzed.
+                </p>
+                <div className="flex items-start gap-1.5">
+                  <Globe className="w-3 h-3 text-zinc-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-zinc-400">
+                    URL Context and Google Grounding are always enabled for the best results.
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* URL Context Input */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-                  <Globe className="w-4 h-4" />
-                  Reference URLs (Optional)
-                </label>
-                <button
-                  onClick={() => setUseUrlContext(!useUrlContext)}
-                  className={cn(
-                    "text-xs px-2 py-1 rounded-full transition-colors",
-                    useUrlContext 
-                      ? "bg-blue-100 text-blue-700 hover:bg-blue-200" 
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                  )}
-                >
-                  {useUrlContext ? 'Enabled' : 'Disabled'}
-                </button>
-              </div>
-              
-              {useUrlContext && (
-                <>
-                  <textarea
-                    placeholder="Paste URLs here (one per line)&#10;https://example.com/article1&#10;https://example.com/article2&#10;&#10;The AI will analyze these pages and use them as context for generating your LinkedIn posts."
-                    value={referenceUrls}
-                    onChange={(e) => setReferenceUrls(e.target.value)}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none font-mono text-sm"
-                  />
-                  <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <Link className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-xs text-blue-700 space-y-1">
-                        <p className="font-medium">URL Context helps you:</p>
-                        <ul className="ml-3 space-y-0.5 list-disc list-inside">
-                          <li>Summarize articles into LinkedIn posts</li>
-                          <li>Compare insights from multiple sources</li>
-                          <li>Create posts based on product pages</li>
-                          <li>Transform research into engaging content</li>
-                        </ul>
-                        <p className="text-blue-600 mt-1">Max 20 URLs • Content behind paywalls won't be accessible</p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
 
             {/* Generate Button */}
             <button
