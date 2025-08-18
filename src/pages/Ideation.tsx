@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe, Mail, CheckCircle, MessageSquare } from 'lucide-react';
+import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe, Mail, CheckCircle, MessageSquare, ExternalLink, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
 import { gpt5ResponsesService } from '../services/gpt5-responses.service';
@@ -744,14 +744,34 @@ const Ideation = () => {
             )}
             
             {idea.source === 'slack' && idea.slack_user_name && (
-              <div className="bg-purple-50 rounded p-2 mb-3">
-                <p className="text-xs text-purple-600 font-medium flex items-center gap-1">
-                  <MessageSquare className="h-3 w-3" />
-                  From {idea.slack_user_name} in Slack
-                </p>
-                {idea.notes && (
-                  <p className="text-xs text-purple-500 mt-1">{idea.notes}</p>
-                )}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <MessageSquare className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-purple-900">
+                        {idea.slack_user_name}
+                      </p>
+                      <p className="text-xs text-purple-600">
+                        {idea.notes || 'From Slack'}
+                      </p>
+                    </div>
+                  </div>
+                  {idea.original_message_url && (
+                    <a 
+                      href={idea.original_message_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View in Slack
+                    </a>
+                  )}
+                </div>
               </div>
             )}
 
@@ -916,8 +936,9 @@ const Ideation = () => {
                 <div className="flex items-center gap-2 mt-2">
                   {getSourceIcon(selectedIdea.source)}
                   <span className="text-sm text-zinc-500">
-                    From {selectedIdea.source.replace('-', ' ')}
-                    {selectedIdea.source === 'slack' && selectedIdea.slack_user_name && ` - ${selectedIdea.slack_user_name}`}
+                    From {selectedIdea.source === 'slack' && selectedIdea.slack_user_name 
+                      ? `${selectedIdea.slack_user_name} via Slack`
+                      : selectedIdea.source.replace('-', ' ')}
                   </span>
                   <span className={cn("px-2 py-1 rounded text-xs font-medium", getPriorityColor(selectedIdea.priority))}>
                     {selectedIdea.priority.toUpperCase()}

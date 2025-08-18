@@ -369,6 +369,21 @@ const SlackSettings = () => {
           </div>
         )}
 
+        {/* How to Submit Ideas */}
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-sm font-semibold text-blue-900 mb-2">📝 How to Submit Content Ideas in Slack</h3>
+          <div className="text-sm text-blue-800 space-y-1">
+            <p>Team members can submit ideas by starting their message with one of these keywords:</p>
+            <ul className="ml-4 mt-2 space-y-1">
+              <li>• <code className="bg-blue-100 px-1 rounded">!idea</code> - Example: "!idea Write about AI trends in 2025"</li>
+              <li>• <code className="bg-blue-100 px-1 rounded">Idea:</code> - Example: "Idea: How to scale B2B SaaS"</li>
+              <li>• <code className="bg-blue-100 px-1 rounded">💡</code> - Start with a lightbulb emoji</li>
+              <li>• <code className="bg-blue-100 px-1 rounded">Post about:</code> - Example: "Post about: Product-market fit"</li>
+            </ul>
+            <p className="mt-2 text-xs">Messages must be at least 30 characters. System messages (joins, renames) are automatically filtered out.</p>
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-zinc-200 p-4">

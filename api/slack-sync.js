@@ -155,6 +155,43 @@ export default async function handler(req, res) {
     let messagesProcessed = 0;
     let ideasCreated = 0;
     const errors = [];
+    const userCache = {}; // Cache user info to avoid repeated API calls
+
+    // Helper function to get user info
+    const getUserInfo = async (userId) => {
+      if (userCache[userId]) {
+        return userCache[userId];
+      }
+      
+      try {
+        const userResponse = await fetch(
+          `https://slack.com/api/users.info?user=${userId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${workspace.bot_token}`,
+              'Accept': 'application/json'
+            }
+          }
+        );
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.ok && userData.user) {
+            const userInfo = {
+              real_name: userData.user.real_name || userData.user.name,
+              display_name: userData.user.profile?.display_name || userData.user.name,
+              avatar: userData.user.profile?.image_48
+            };
+            userCache[userId] = userInfo;
+            return userInfo;
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to fetch user info for ${userId}:`, error);
+      }
+      
+      return null;
+    };
 
     // Process each message
     for (const message of messages) {
@@ -163,13 +200,36 @@ export default async function handler(req, res) {
         continue;
       }
       
-      // Skip very short messages
-      if (!message.text || message.text.trim().length < 10) {
+      // Skip system messages (joins, leaves, renames, etc.)
+      const systemSubtypes = [
+        'channel_join', 'channel_leave', 'channel_name', 'channel_purpose',
+        'channel_topic', 'channel_archive', 'channel_unarchive', 'file_share',
+        'thread_broadcast', 'bot_add', 'bot_remove', 'group_join', 'group_leave',
+        'channel_convert_to_private', 'channel_convert_to_public'
+      ];
+      
+      if (message.subtype && systemSubtypes.includes(message.subtype)) {
+        console.log(`⏭️ Skipping system message: ${message.subtype}`);
+        continue;
+      }
+      
+      // Skip messages without text or very short messages
+      if (!message.text || message.text.trim().length < 30) {
+        continue;
+      }
+      
+      // Skip messages that are just URLs or mentions
+      const trimmedText = message.text.trim();
+      if (trimmedText.match(/^<@[A-Z0-9]+>$/) || trimmedText.match(/^<https?:\/\/[^\s]+>$/)) {
         continue;
       }
 
       try {
         messagesProcessed++;
+        
+        // Get user info for better attribution
+        const userInfo = await getUserInfo(message.user);
+        const userName = userInfo?.real_name || userInfo?.display_name || message.user;
         
         // Save message to database
         const { data: savedMessage, error: msgError } = await supabase
@@ -178,6 +238,7 @@ export default async function handler(req, res) {
             channel_id: channelId,
             message_id: message.ts,
             user_id: message.user,
+            user_name: userName, // Store the actual user name
             message_text: message.text,
             message_type: message.thread_ts ? 'thread_reply' : 'message',
             thread_ts: message.thread_ts,
@@ -206,14 +267,15 @@ export default async function handler(req, res) {
               ...ideaData,
               slack_message_id: savedMessage.id,
               slack_channel_id: channelId,
-              slack_user_name: message.user,
+              slack_user_name: userName, // Use the real user name
               source: 'slack',
               status: channel.auto_approve ? 'ready' : 'draft',
               client_id: channel.client_id,
               user_id: channel.user_id,
               used_count: 0,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              original_message_url: `https://app.slack.com/client/${workspace.workspace_id}/${channel.channel_id}/thread/${channel.channel_id}-${message.ts.replace('.', '')}`
             }])
             .select()
             .single();
@@ -286,45 +348,97 @@ export default async function handler(req, res) {
 
 // Helper function to parse message into idea
 function parseMessageToIdea(text, channel) {
-  if (!text || text.trim().length < 10) {
+  if (!text || text.trim().length < 30) {
     return null;
   }
 
   const trimmedText = text.trim();
   
+  // Check if message is likely a content idea
+  const ideaKeywords = [
+    /^!idea\s+/i,
+    /^idea:\s*/i,
+    /^content idea:\s*/i,
+    /^post about:\s*/i,
+    /^topic:\s*/i,
+    /^suggestion:\s*/i,
+    /^blog post:\s*/i,
+    /^article:\s*/i,
+    /^linkedin post:\s*/i,
+    /^💡\s*/,
+    /^✍️\s*/,
+    /^📝\s*/
+  ];
+  
+  // Check if message starts with any idea keyword
+  const hasIdeaKeyword = ideaKeywords.some(pattern => trimmedText.match(pattern));
+  
+  // If no keyword found and channel doesn't auto-approve, skip
+  if (!hasIdeaKeyword && !channel.auto_approve) {
+    console.log(`⏭️ Skipping message without idea keyword: "${trimmedText.substring(0, 50)}..."`);
+    return null;
+  }
+  
   // Extract title and description
   let title, description;
   
-  // Check for structured format
-  const structuredMatch = trimmedText.match(/^(?:title|idea):\s*(.+?)(?:\n|$)(?:description|details)?:?\s*(.+)?/i);
-  if (structuredMatch) {
-    title = structuredMatch[1].trim();
-    description = structuredMatch[2]?.trim() || structuredMatch[1].trim();
-  } else {
-    // Use first line as title, full text as description
-    const lines = trimmedText.split('\n').filter(l => l.trim());
-    title = lines[0].substring(0, 100);
-    description = trimmedText;
+  // Remove idea prefix if present
+  let cleanedText = trimmedText;
+  for (const pattern of ideaKeywords) {
+    cleanedText = cleanedText.replace(pattern, '');
   }
+  cleanedText = cleanedText.trim();
+  
+  // Check for structured format (Title: ... Description: ...)
+  const structuredMatch = cleanedText.match(/^(.+?)(?:\n|\.|\?|!)(.+)?$/s);
+  if (structuredMatch) {
+    const firstPart = structuredMatch[1].trim();
+    const restPart = structuredMatch[2]?.trim();
+    
+    // Use first sentence/line as title
+    title = firstPart.length > 100 ? firstPart.substring(0, 97) + '...' : firstPart;
+    description = restPart ? `${firstPart}\n\n${restPart}` : firstPart;
+  } else {
+    // Use the whole text
+    title = cleanedText.length > 100 ? cleanedText.substring(0, 97) + '...' : cleanedText;
+    description = cleanedText;
+  }
+  
+  // Clean up Slack formatting
+  title = title.replace(/<@[A-Z0-9]+>/g, '@user'); // Replace user mentions
+  title = title.replace(/<#[A-Z0-9]+\|([^>]+)>/g, '#$1'); // Replace channel mentions
+  title = title.replace(/<(https?:\/\/[^|>]+)\|([^>]+)>/g, '$2'); // Replace formatted links
+  
+  description = description.replace(/<@[A-Z0-9]+>/g, '@user');
+  description = description.replace(/<#[A-Z0-9]+\|([^>]+)>/g, '#$1');
+  description = description.replace(/<(https?:\/\/[^|>]+)\|([^>]+)>/g, '$2 ($1)');
   
   // Extract priority
   let priority = 'medium';
   const lowerText = trimmedText.toLowerCase();
   if (lowerText.includes('urgent') || lowerText.includes('high priority') || lowerText.includes('asap')) {
     priority = 'high';
-  } else if (lowerText.includes('low priority') || lowerText.includes('maybe')) {
+  } else if (lowerText.includes('low priority') || lowerText.includes('maybe') || lowerText.includes('someday')) {
     priority = 'low';
   }
   
   // Extract hashtags
   const hashtags = trimmedText.match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
   
+  // Determine category based on content
+  let category = 'General';
+  if (lowerText.includes('product') || lowerText.includes('feature')) category = 'Product';
+  else if (lowerText.includes('marketing') || lowerText.includes('campaign')) category = 'Marketing';
+  else if (lowerText.includes('sales') || lowerText.includes('revenue')) category = 'Sales';
+  else if (lowerText.includes('engineer') || lowerText.includes('technical')) category = 'Engineering';
+  else if (lowerText.includes('customer') || lowerText.includes('support')) category = 'Customer Success';
+  
   return {
     title,
     description,
     priority,
     hashtags,
-    category: 'General',
+    category,
     notes: `From Slack channel #${channel.channel_name}`
   };
 }
