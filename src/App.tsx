@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import EnvTest from './pages/EnvTest';
 import Approval from './pages/Approval';
 import Prompts from './pages/Prompts';
+import SlackSettings from './pages/SlackSettings';
 
 // Start background processor for search jobs
 import './services/background-processor.service';
@@ -41,6 +42,7 @@ function App() {
                   <Route path="/schedule" element={<Schedule />} />
                   <Route path="/clients" element={<Clients />} />
                   <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/slack-settings" element={<SlackSettings />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/env-test" element={<EnvTest />} />
                 </Routes>

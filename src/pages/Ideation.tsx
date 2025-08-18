@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe, Mail, CheckCircle } from 'lucide-react';
+import { Lightbulb, TrendingUp, Brain, Zap, Plus, Star, Clock, Filter, Search, ChevronRight, Sparkles, Users, BarChart, Loader2, AlertCircle, Newspaper, Globe, Mail, CheckCircle, MessageSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
 import { gpt5ResponsesService } from '../services/gpt5-responses.service';
@@ -27,6 +27,7 @@ const Ideation = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedClient, setSelectedClient] = useState('all');
+  const [selectedSource, setSelectedSource] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewIdeaModal, setShowNewIdeaModal] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<IdeaWithUI | null>(null);
@@ -125,8 +126,9 @@ const Ideation = () => {
     const matchesCategory = selectedCategory === 'all' || idea.category === selectedCategory;
     const matchesStatus = selectedStatus === 'all' || idea.status === selectedStatus;
     const matchesClient = selectedClient === 'all' || idea.client_id === selectedClient;
+    const matchesSource = selectedSource === 'all' || idea.source === selectedSource;
     
-    return matchesSearch && matchesCategory && matchesStatus && matchesClient;
+    return matchesSearch && matchesCategory && matchesStatus && matchesClient && matchesSource;
   });
 
   const handleCreateIdea = async () => {
@@ -440,6 +442,7 @@ const Ideation = () => {
       case 'ai': return <Sparkles className="h-4 w-4" />;
       case 'manual': return <Lightbulb className="h-4 w-4" />;
       case 'content-lake': return <BarChart className="h-4 w-4" />;
+      case 'slack': return <MessageSquare className="h-4 w-4" />;
       default: return <Lightbulb className="h-4 w-4" />;
     }
   };
@@ -549,7 +552,7 @@ const Ideation = () => {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-zinc-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -579,6 +582,17 @@ const Ideation = () => {
                 </p>
               </div>
               <Star className="h-8 w-8 text-red-300" />
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-zinc-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-zinc-600">From Slack</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {ideas.filter(i => i.source === 'slack').length}
+                </p>
+              </div>
+              <MessageSquare className="h-8 w-8 text-purple-300" />
             </div>
           </div>
           <div className="bg-white rounded-lg border border-zinc-200 p-4">
@@ -629,6 +643,19 @@ const Ideation = () => {
               <option value="ready">Ready</option>
               <option value="in-progress">In Progress</option>
               <option value="used">Used</option>
+            </select>
+
+            <select 
+              value={selectedSource} 
+              onChange={(e) => setSelectedSource(e.target.value)}
+              className="px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            >
+              <option value="all">All Sources</option>
+              <option value="manual">Manual</option>
+              <option value="ai">AI Generated</option>
+              <option value="slack">Slack</option>
+              <option value="trending">Trending</option>
+              <option value="content-lake">Content Lake</option>
             </select>
 
             <select 
@@ -713,6 +740,18 @@ const Ideation = () => {
                 <p className="text-xs text-zinc-500 mb-1">Inspired by {idea.linkedPost.creator}</p>
                 <p className="text-xs text-zinc-700 italic line-clamp-2">"{idea.linkedPost.snippet}"</p>
                 <p className="text-xs text-zinc-500 mt-1">{idea.linkedPost.reactions} reactions</p>
+              </div>
+            )}
+            
+            {idea.source === 'slack' && idea.slack_user_name && (
+              <div className="bg-purple-50 rounded p-2 mb-3">
+                <p className="text-xs text-purple-600 font-medium flex items-center gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  From {idea.slack_user_name} in Slack
+                </p>
+                {idea.notes && (
+                  <p className="text-xs text-purple-500 mt-1">{idea.notes}</p>
+                )}
               </div>
             )}
 
@@ -878,6 +917,7 @@ const Ideation = () => {
                   {getSourceIcon(selectedIdea.source)}
                   <span className="text-sm text-zinc-500">
                     From {selectedIdea.source.replace('-', ' ')}
+                    {selectedIdea.source === 'slack' && selectedIdea.slack_user_name && ` - ${selectedIdea.slack_user_name}`}
                   </span>
                   <span className={cn("px-2 py-1 rounded text-xs font-medium", getPriorityColor(selectedIdea.priority))}>
                     {selectedIdea.priority.toUpperCase()}
@@ -902,6 +942,32 @@ const Ideation = () => {
                 <p className="text-sm font-medium text-zinc-700 mb-2">Inspiration from {selectedIdea.linkedPost.creator}</p>
                 <p className="text-sm text-zinc-600 italic">"{selectedIdea.linkedPost.snippet}"</p>
                 <p className="text-sm text-zinc-500 mt-2">{selectedIdea.linkedPost.reactions} reactions</p>
+              </div>
+            )}
+            
+            {selectedIdea.source === 'slack' && selectedIdea.slack_user_name && (
+              <div className="bg-purple-50 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="h-5 w-5 text-purple-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-purple-700 mb-1">
+                      Submitted by {selectedIdea.slack_user_name}
+                    </p>
+                    {selectedIdea.notes && (
+                      <p className="text-sm text-purple-600">{selectedIdea.notes}</p>
+                    )}
+                    {selectedIdea.original_message_url && (
+                      <a 
+                        href={selectedIdea.original_message_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-purple-500 hover:text-purple-700 underline mt-2 inline-block"
+                      >
+                        View original message in Slack →
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode } from 'lucide-react';
+import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { generatedContentService } from '../services/database.service';
 
@@ -94,6 +94,11 @@ const Navigation = () => {
         <NavLink to="/clients" className={linkClass}>
           <Users className="h-4 w-4" />
           Clients
+        </NavLink>
+        
+        <NavLink to="/slack-settings" className={linkClass}>
+          <MessageSquare className="h-4 w-4" />
+          Slack
         </NavLink>
         
         <div className="pt-4 mt-4 border-t border-zinc-200">

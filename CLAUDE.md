@@ -23,6 +23,8 @@ ghostwriter-portal/
 │   ├── process-search.js       # Processes GPT-5 background searches
 │   ├── send-email.js          # Sends email notifications
 │   ├── check-and-notify.js    # Checks and sends pending notifications
+│   ├── slack-webhook.js       # Receives Slack events (NEW)
+│   ├── slack-morning-sync.js  # Daily Slack sync automation (NEW)
 │   ├── test-gpt5.js          # Test endpoint for GPT-5
 │   └── test-simple.js        # Simple test for response structure
 ├── src/
@@ -44,26 +46,31 @@ ghostwriter-portal/
 │   │   ├── Ideation.tsx       # Content ideation with GPT-5 web search
 │   │   ├── Schedule.tsx       # Post scheduling
 │   │   ├── Clients.tsx        # Client management
-│   │   └── Analytics.tsx      # Performance metrics
+│   │   ├── Analytics.tsx      # Performance metrics
+│   │   └── SlackSettings.tsx  # Slack integration management (NEW)
 │   ├── services/
 │   │   ├── database.service.ts         # Database operations
 │   │   ├── gpt5-responses.service.ts   # GPT-5 Responses API
 │   │   ├── search-jobs.service.ts      # Background job management
 │   │   ├── background-processor.service.ts # Client-side job processor
 │   │   ├── email.service.ts           # Email service (browser-side)
-│   │   └── web-search.service.ts      # Web search API integrations
+│   │   ├── web-search.service.ts      # Web search API integrations
+│   │   ├── slack.service.ts           # Slack API wrapper (NEW)
+│   │   └── slack-sync.service.ts      # Slack sync orchestration (NEW)
 │   └── App.tsx                # Main app component
 ├── Database Scripts/
 │   ├── create_search_jobs_table.sql    # Background jobs table
 │   ├── create_prompt_templates_table.sql # Prompt system schema
 │   ├── populate_prompts.sql            # LinkedIn prompts data
+│   ├── create_slack_tables.sql        # Slack integration schema (NEW)
 │   └── FINAL_FIX_DATABASE.sql         # Database fixes
 ├── Documentation/
 │   ├── CLAUDE.md              # This file - main documentation
 │   ├── CHANGELOG.md           # Detailed change history
 │   ├── VERCEL_ENV_VARS.md    # Environment variables setup guide
 │   ├── BACKGROUND_SEARCH.md   # Background search feature docs
-│   └── TROUBLESHOOTING.md     # Common issues and solutions
+│   ├── TROUBLESHOOTING.md     # Common issues and solutions
+│   └── SLACK_INTEGRATION.md   # Slack setup and usage guide (NEW)
 ├── .env.local                 # Local environment variables
 ├── .env.example              # Environment template
 └── vercel.json               # Vercel configuration
@@ -81,6 +88,8 @@ SUPABASE_URL=your_supabase_url        # For database access
 SUPABASE_ANON_KEY=your_supabase_key   # For database auth
 RESEND_API_KEY=your_resend_key        # For email notifications
 ADMIN_EMAIL=eimrib@yess.ai            # Where to send notifications
+SLACK_SIGNING_SECRET=your_slack_secret # For Slack webhook verification
+CRON_SECRET=your_cron_secret          # For cron job authentication
 ```
 
 #### Frontend Variables (WITH VITE_ prefix) - For React App:
@@ -91,6 +100,8 @@ VITE_SUPABASE_ANON_KEY=same_supabase_key
 VITE_GOOGLE_API_KEY=your_google_key
 VITE_RESEND_API_KEY=same_resend_key
 VITE_ADMIN_EMAIL=eimrib@yess.ai
+VITE_SLACK_SIGNING_SECRET=same_slack_secret
+VITE_CRON_SECRET=same_cron_secret
 VITE_ENV=production
 ```
 
@@ -98,7 +109,17 @@ VITE_ENV=production
 
 ## Key Features
 
-### 1. Content Generation (`/generate`)
+### 1. Slack Integration (`/slack-settings`) - NEW ✨
+- **Multi-Workspace Support**: Connect multiple Slack teams
+- **Channel Monitoring**: Capture ideas from dedicated channels
+- **Smart Parsing**: Automatically extract ideas from messages
+- **Sync Options**: Daily, hourly, or real-time sync
+- **Morning Automation**: Daily sync at 9 AM via Vercel Cron
+- **User Attribution**: Track who submitted each idea
+- **Auto-Approval**: Configure trusted channels
+- **See SLACK_INTEGRATION.md for complete setup guide**
+
+### 2. Content Generation (`/generate`)
 - Uses Google Gemini 2.5 Pro API exclusively
 - Max tokens: 1,048,576 (over 1 million tokens)
 - Google Grounding: ENABLED by default for real-time information
@@ -151,14 +172,20 @@ VITE_ENV=production
 ## Database Schema
 
 ### Core Tables
-- `content_ideas` - Content idea storage
+- `content_ideas` - Content idea storage (updated with Slack fields)
 - `generated_content` - Generated LinkedIn posts
 - `scheduled_posts` - Scheduled publications
 - `clients` - Client management
 - `users` - User accounts
 - `prompt_templates` - AI prompt templates
 - `prompt_usage_history` - Prompt usage tracking
-- `search_jobs` - Background search job queue (NEW)
+- `search_jobs` - Background search job queue
+
+### Slack Tables (NEW)
+- `slack_workspaces` - Workspace configurations and credentials
+- `slack_channels` - Channel mappings and sync settings
+- `slack_messages` - Raw message storage before processing
+- `slack_sync_jobs` - Sync operation tracking and metrics
 
 ### search_jobs Table (Background Processing)
 ```sql
@@ -274,7 +301,7 @@ npm run type-check
 3. Run `npm run dev`
 4. Access at http://localhost:5173
 
-## Current System Status (August 15, 2025)
+## Current System Status (August 17, 2025)
 
 ### ✅ FULLY WORKING FEATURES
 - **Content Generation**: Gemini 2.5 Pro with 1M+ tokens
@@ -284,8 +311,9 @@ npm run type-check
 - **Background Processing**: Jobs queue with email notifications
 - **Email Notifications**: Resend API integration
 - **Portal Integration**: Seamless switching between admin/user portals
+- **Slack Integration**: Multi-workspace support with automated sync (NEW)
 
-### 🔧 Recent Fixes (August 14-15, 2025)
+### 🔧 Recent Updates (August 14-17, 2025)
 1. **Fixed GPT-5 API Integration**:
    - Corrected environment variables (non-VITE for serverless)
    - Fixed parameter name: `max_output_tokens`
@@ -301,6 +329,15 @@ npm run type-check
    - Confirmation modal for background searches
    - Active jobs indicator
    - Better error handling and logging
+
+4. **Slack Integration (August 17, 2025)**:
+   - Created comprehensive Slack API integration
+   - Multi-workspace and channel management
+   - Intelligent message parsing and idea extraction
+   - Morning automation via Vercel Cron (9 AM daily)
+   - Real-time webhook support for instant processing
+   - Slack settings page for configuration
+   - Updated Ideation page to display Slack-sourced ideas
 
 ## Testing Checklist
 - [x] GPT-5 API calls work (check OpenAI logs)

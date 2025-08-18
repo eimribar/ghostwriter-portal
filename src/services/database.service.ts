@@ -717,7 +717,7 @@ export interface ContentIdeaDB {
   ghostwriter_id?: string;
   user_id?: string;
   source_post_id?: string;
-  source: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request' | 'competitor';
+  source: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request' | 'competitor' | 'slack';
   title: string;
   description?: string;
   hook?: string;
@@ -745,6 +745,10 @@ export interface ContentIdeaDB {
   feedback?: string;
   rejection_reason?: string;
   used_in_content_id?: string;
+  slack_message_id?: string;
+  slack_channel_id?: string;
+  slack_user_name?: string;
+  original_message_url?: string;
   used_count: number;
   created_at: Date;
   updated_at: Date;
