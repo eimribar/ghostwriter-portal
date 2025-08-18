@@ -123,8 +123,14 @@ async function callAnthropic(prompt: string, temperature = 0.7, maxTokens = 1000
   }
 }
 
-// Google Gemini API call with optional system message and Google Grounding
-async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 1048576, systemMessage?: string): Promise<GenerateContentResponse> {
+// Google Gemini API call with optional system message, Google Grounding, and URL Context
+async function callGoogle(
+  prompt: string, 
+  temperature = 0.7, 
+  _maxTokens = 1048576, 
+  systemMessage?: string,
+  urls?: string[]
+): Promise<GenerateContentResponse> {
   if (!apiConfig.google.apiKey) {
     return {
       content: '[Google API key not configured - using mock response]\n\n' + generateMockContent(prompt),
@@ -161,17 +167,35 @@ async function callGoogle(prompt: string, temperature = 0.7, _maxTokens = 104857
       }
     };
     
+    // Build tools array based on enabled features
+    const tools = [];
+    
+    // Add URL Context if URLs are provided
+    if (urls && urls.length > 0) {
+      tools.push({
+        url_context: {}
+      });
+      console.log(`URL Context: ENABLED with ${urls.length} URLs`);
+      
+      // Modify the prompt to include URLs
+      const urlsText = urls.join('\n');
+      requestBody.contents[0].parts[0].text = `${prompt}\n\nReference URLs:\n${urlsText}`;
+    }
+    
     // Add Google Search grounding for real-time information (controlled by env variable)
     const enableGrounding = import.meta.env.VITE_ENABLE_GOOGLE_GROUNDING !== 'false';
     if (enableGrounding) {
-      requestBody.tools = [
-        {
-          google_search: {}
-        }
-      ];
+      tools.push({
+        google_search: {}
+      });
       console.log('Google Grounding: ENABLED');
     } else {
       console.log('Google Grounding: DISABLED (manually turned off)');
+    }
+    
+    // Add tools to request if any are enabled
+    if (tools.length > 0) {
+      requestBody.tools = tools;
     }
     
     // Add systemInstruction if provided
@@ -269,9 +293,10 @@ export async function generateContent(request: GenerateContentRequest): Promise<
 // Generate LinkedIn content with different style variations
 export async function generateLinkedInVariations(
   contentIdea: string,
-  count: number = 4
+  count: number = 4,
+  urls?: string[]
 ): Promise<GenerateContentResponse[]> {
-  console.log('generateLinkedInVariations called with:', { contentIdea, count });
+  console.log('generateLinkedInVariations called with:', { contentIdea, count, urls: urls?.length });
   console.log('Google API Key configured:', !!apiConfig.google.apiKey);
   console.log('API Key length:', apiConfig.google.apiKey?.length);
   
@@ -306,7 +331,8 @@ export async function generateLinkedInVariations(
         contentIdea,
         1.5, // Temperature 1.5 for extreme creativity
         1048576, // Use full 1 million token capacity
-        template.systemMessage
+        template.systemMessage,
+        urls // Pass URLs if provided
       )
     );
   }
@@ -320,7 +346,8 @@ export async function generateLinkedInVariations(
           contentIdea,
           1.5, // Temperature 1.5
           1048576, // 1 million tokens
-          template.systemMessage
+          template.systemMessage,
+          urls // Pass URLs if provided
         )
       );
     }
@@ -333,12 +360,14 @@ export async function generateLinkedInVariations(
 export async function generateWithPrompt(
   contentIdea: string,
   promptTemplate: PromptTemplate,
-  count: number = 4
+  count: number = 4,
+  urls?: string[]
 ): Promise<GenerateContentResponse[]> {
   console.log('Generating with custom prompt:', promptTemplate.name);
   console.log('Provider:', promptTemplate.provider);
   console.log('Temperature:', promptTemplate.settings?.temperature);
   console.log('Max Tokens:', promptTemplate.settings?.max_tokens);
+  console.log('URLs provided:', urls?.length || 0);
   
   const variations: Promise<GenerateContentResponse>[] = [];
   
@@ -353,7 +382,8 @@ export async function generateWithPrompt(
           contentIdea,
           temperature,
           maxTokens,
-          promptTemplate.system_message
+          promptTemplate.system_message,
+          urls // Pass URLs if provided
         )
       );
     } else if (promptTemplate.provider === 'openai') {
@@ -383,7 +413,8 @@ export async function generateWithPrompt(
           contentIdea,
           temperature,
           maxTokens,
-          promptTemplate.system_message
+          promptTemplate.system_message,
+          urls // Pass URLs if provided
         )
       );
     }
