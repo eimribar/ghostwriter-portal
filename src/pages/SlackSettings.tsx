@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Settings, Trash2, RefreshCw, Check, X, Loader2, AlertCircle, Users, Hash, Clock, Zap, Link } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, RefreshCw, Check, X, Loader2, AlertCircle, Hash, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { slackService } from '../services/slack.service';
@@ -40,7 +40,6 @@ const SlackSettings = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAddWorkspace, setShowAddWorkspace] = useState(false);
   const [showAddChannel, setShowAddChannel] = useState(false);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
   
   const [newWorkspace, setNewWorkspace] = useState({
     workspace_name: '',

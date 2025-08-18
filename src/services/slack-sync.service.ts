@@ -1,7 +1,7 @@
 // Slack Sync Service
 // Orchestrates the sync process and transforms Slack messages to content ideas
 
-import { slackService, type SlackMessage, type SlackChannel, type SlackWorkspace } from './slack.service';
+import { slackService, type SlackMessage, type SlackChannel } from './slack.service';
 import { contentIdeasService, type ContentIdeaDB } from './database.service';
 import { supabase } from '../lib/supabase';
 
@@ -52,7 +52,7 @@ class SlackSyncService {
       }
 
       // Create sync job
-      const { data: syncJob, error: jobError } = await supabase
+      const { data: syncJob } = await supabase
         .from('slack_sync_jobs')
         .insert([{
           workspace_id: workspace.id,
@@ -166,7 +166,7 @@ class SlackSyncService {
   // Process a single message into a content idea
   private async processMessageToIdea(
     message: SlackMessage,
-    channel: SlackChannel
+    channel: SlackChannel & { slack_workspaces?: any }
   ): Promise<ContentIdeaDB | null> {
     try {
       // Parse the message to extract idea components
@@ -178,12 +178,21 @@ class SlackSyncService {
         return null;
       }
 
+      // Get workspace info if needed
+      let workspaceId: string | undefined;
+      let botToken: string | undefined;
+      
+      if (channel.slack_workspaces) {
+        workspaceId = channel.slack_workspaces.workspace_id;
+        botToken = channel.slack_workspaces.bot_token;
+      }
+
       // Get user info if possible (for attribution)
       let userName = message.user_name;
-      if (!userName && channel.slack_workspaces?.bot_token) {
+      if (!userName && botToken) {
         try {
           const userInfo = await slackService.getUserInfo(
-            channel.slack_workspaces.bot_token,
+            botToken,
             message.user_id
           );
           userName = userInfo?.real_name || userInfo?.name || message.user_id;
@@ -208,7 +217,7 @@ class SlackSyncService {
         hashtags: parsedIdea.tags,
         notes: `Source: Slack channel #${channel.channel_name}`,
         original_message_url: this.generateSlackMessageUrl(
-          channel.slack_workspaces?.workspace_id,
+          workspaceId,
           channel.channel_id,
           message.message_id
         )
