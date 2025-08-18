@@ -98,18 +98,31 @@ const SlackSettings = () => {
     }
     
     try {
-      // Test the bot token by getting bot info
-      const response = await fetch('https://slack.com/api/auth.test', {
+      // Determine API URL based on environment
+      const apiUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5173/api/slack-verify-token'
+        : '/api/slack-verify-token';
+      
+      console.log('🔐 Verifying bot token via API...');
+      
+      // Test the bot token via our backend API
+      const response = await fetch(apiUrl, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${newWorkspace.bot_token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          bot_token: newWorkspace.bot_token
+        })
       });
       
       const data = await response.json();
+      console.log('📊 Verification response:', data);
       
       if (!data.ok) {
-        throw new Error(`Invalid bot token: ${data.error}`);
+        // Provide detailed error message
+        const errorMessage = data.details || data.error || 'Invalid bot token';
+        throw new Error(errorMessage);
       }
       
       // Save workspace with verified info
@@ -117,7 +130,7 @@ const SlackSettings = () => {
         .from('slack_workspaces')
         .insert([{
           workspace_name: newWorkspace.workspace_name,
-          workspace_id: data.team_id,
+          workspace_id: data.team_id || newWorkspace.workspace_id,
           bot_token: newWorkspace.bot_token,
           bot_user_id: data.user_id,
           app_id: newWorkspace.app_id || data.bot_id,
@@ -126,8 +139,12 @@ const SlackSettings = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw new Error(`Failed to save workspace: ${error.message}`);
+      }
       
+      console.log('✅ Workspace added successfully:', workspace);
       setWorkspaces([...workspaces, workspace]);
       setShowAddWorkspace(false);
       setNewWorkspace({
@@ -136,10 +153,11 @@ const SlackSettings = () => {
         bot_token: '',
         app_id: ''
       });
+      setError(null); // Clear any previous errors
       
     } catch (err: any) {
-      console.error('Error adding workspace:', err);
-      setError(err.message || 'Failed to add workspace');
+      console.error('❌ Error adding workspace:', err);
+      setError(err.message || 'Failed to add workspace. Please check your bot token.');
     }
   };
 
@@ -455,6 +473,12 @@ const SlackSettings = () => {
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-zinc-900 mb-4">Add Slack Workspace</h2>
             
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-1">Workspace Name</label>
@@ -505,7 +529,10 @@ const SlackSettings = () => {
             
             <div className="flex gap-2 mt-6">
               <button
-                onClick={() => setShowAddWorkspace(false)}
+                onClick={() => {
+                  setShowAddWorkspace(false);
+                  setError(null);
+                }}
                 className="flex-1 px-4 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
               >
                 Cancel
