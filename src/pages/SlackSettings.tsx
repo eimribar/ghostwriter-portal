@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { MessageSquare, Plus, Trash2, RefreshCw, Check, X, Loader2, AlertCircle, Hash, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
-import { slackService } from '../services/slack.service';
 import { slackSyncService } from '../services/slack-sync.service';
 
 interface SlackWorkspace {
