@@ -113,7 +113,7 @@ export default async function handler(req, res) {
       // Provide helpful error messages
       let errorMessage = slackData.error;
       if (slackData.error === 'not_in_channel') {
-        errorMessage = `Bot is not in channel #${channel.channel_name}. Please go to Slack and:\n1. Open the #${channel.channel_name} channel\n2. Type: /invite @Ghostwriter Content Bot\n3. Then try syncing again`;
+        errorMessage = `Bot is not in channel #${channel.channel_name}. Please go to Slack and:\n1. Open the #${channel.channel_name} channel\n2. Type: /invite @Ghostwriter\n3. Then try syncing again`;
       } else if (slackData.error === 'channel_not_found') {
         errorMessage = 'Channel not found. Please check the channel ID';
       } else if (slackData.error === 'invalid_auth') {
