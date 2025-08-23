@@ -165,6 +165,12 @@ fetch('https://api.resend.com/emails', {
 ### Issue: Email not sending but no error
 **Solution**: Check that RESEND_API_KEY is set in environment variables (without VITE_ prefix for serverless functions)
 
+### Issue: Frontend not detecting production environment
+**Solution**: Use `import.meta.env.PROD` instead of `process.env.NODE_ENV` in Vite apps
+
+### Issue: Serverless function can't find API key
+**Solution**: Add fallback pattern: `process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY`
+
 ### Issue: CORS errors when calling from frontend
 **Solution**: Always call through your API endpoint, not directly to Resend
 
