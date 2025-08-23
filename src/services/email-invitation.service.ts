@@ -348,9 +348,9 @@ LinkedIn Content Management Team
 
       // Send email via Vercel function
       try {
-        const apiUrl = process.env.NODE_ENV === 'production' 
+        const apiUrl = import.meta.env.PROD 
           ? '/api/send-invitation'
-          : 'http://localhost:3000/api/send-invitation';
+          : '/api/send-invitation';
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -440,9 +440,9 @@ LinkedIn Content Management Team
       };
 
       // Send email
-      const apiUrl = process.env.NODE_ENV === 'production' 
+      const apiUrl = import.meta.env.PROD 
         ? '/api/send-invitation'
-        : 'http://localhost:3000/api/send-invitation';
+        : '/api/send-invitation';
 
       const response = await fetch(apiUrl, {
         method: 'POST',

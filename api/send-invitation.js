@@ -5,7 +5,7 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY);
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -26,6 +26,16 @@ export default async function handler(req, res) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Check if API key exists
+  const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
+  if (!apiKey) {
+    console.error('❌ Missing RESEND_API_KEY in environment variables');
+    return res.status(500).json({ 
+      error: 'Email service not configured', 
+      details: 'RESEND_API_KEY is missing from environment variables' 
+    });
   }
 
   try {
