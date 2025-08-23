@@ -352,6 +352,10 @@ LinkedIn Content Management Team
           ? '/api/send-invitation'
           : '/api/send-invitation';
 
+        console.log('📧 Attempting to send email via:', apiUrl);
+        console.log('Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
+        console.log('Full URL would be:', window.location.origin + apiUrl);
+
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -367,20 +371,27 @@ LinkedIn Content Management Team
           }),
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Email sending failed:', errorData);
+          const errorData = await response.json().catch(() => ({ error: 'Could not parse error response' }));
+          console.error('❌ Email API call failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData
+          });
           
-          // Still return success if invitation was created (email can be resent)
+          // Return error (not success!) so user knows email failed
           return { 
-            success: true, 
+            success: false, 
             invitationId: invitation.invitation_id,
-            error: 'Invitation created but email failed to send. You can resend it later.'
+            error: `Email failed: ${errorData.error || errorData.details || response.statusText}`
           };
         }
 
         const result = await response.json();
-        console.log('✅ Invitation email sent successfully:', result);
+        console.log('✅ Email API response:', result);
 
         return { 
           success: true, 
@@ -388,12 +399,12 @@ LinkedIn Content Management Team
         };
         
       } catch (emailError) {
-        console.error('Error sending email:', emailError);
-        // Still return success if invitation was created
+        console.error('❌ Network error calling email API:', emailError);
+        // Return error (not success!) so user knows email failed
         return { 
-          success: true, 
+          success: false, 
           invitationId: invitation.invitation_id,
-          error: 'Invitation created but email failed to send. You can resend it later.'
+          error: `Network error: ${emailError.message}`
         };
       }
       
