@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     
     try {
       const email = await resend.emails.send({
-        from: 'Ghostwriter Portal <onboarding@resend.dev>',
+        from: 'Ghostwriter Portal <send@agents.ai>',
         to: [to],
         subject,
         html,

@@ -106,7 +106,7 @@ export default async function handler(req, res) {
         `;
 
         await resend.emails.send({
-          from: 'Ghostwriter Portal <onboarding@resend.dev>',
+          from: 'Ghostwriter Portal <send@agents.ai>',
           to: [adminEmail],
           subject: `✨ Your Content Ideas Are Ready! (${job.result_count || 10} ideas found)`,
           html: emailHtml

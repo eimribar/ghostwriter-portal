@@ -318,7 +318,7 @@ export default async function handler(req, res) {
       `;
 
       await resend.emails.send({
-        from: 'Ghostwriter Portal <onboarding@resend.dev>',
+        from: 'Ghostwriter Portal <send@agents.ai>',
         to: [process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || 'eimrib@yess.ai'],
         subject: `✨ Your Content Ideas Are Ready! (${ideas.length} ideas found)`,
         html: emailHtml

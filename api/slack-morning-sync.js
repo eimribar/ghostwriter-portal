@@ -413,7 +413,7 @@ async function sendSyncSummaryEmail(syncResults) {
     `;
     
     await resend.emails.send({
-      from: 'Ghostwriter Portal <onboarding@resend.dev>',
+      from: 'Ghostwriter Portal <send@agents.ai>',
       to: [adminEmail],
       subject: `📨 Slack Sync: ${syncResults.totalIdeasCreated} new ideas from ${syncResults.totalChannels} channels`,
       html: emailHtml
