@@ -404,7 +404,7 @@ LinkedIn Content Management Team
         return { 
           success: false, 
           invitationId: invitation.invitation_id,
-          error: `Network error: ${emailError.message}`
+          error: `Network error: ${emailError instanceof Error ? emailError.message : 'Unknown error'}`
         };
       }
       
