@@ -180,8 +180,14 @@ ${data.companyName}`;
             error: errorData
           });
           
-          // Return the actual error
-          throw new Error(`Email failed: ${errorData.error || errorData.details || response.statusText}`);
+          // Don't throw - return partial success with invitation details
+          return { 
+            success: false,
+            emailFailed: true,
+            invitationId: invitation.invitation_id,
+            invitationToken: invitation.token,
+            error: `Email delivery failed (${response.status}) but invitation created. You can share the link manually.`
+          };
         }
 
         const result = await response.json();
@@ -194,11 +200,13 @@ ${data.companyName}`;
         
       } catch (emailError) {
         console.error('❌ Network error calling email API:', emailError);
-        // Return error (not success!) so user knows email failed
+        // Return partial success - invitation created but email failed
         return { 
-          success: false, 
+          success: false,
+          emailFailed: true,
           invitationId: invitation.invitation_id,
-          error: `Network error: ${emailError instanceof Error ? emailError.message : 'Unknown error'}`
+          invitationToken: invitation.token,
+          error: `Email delivery failed but invitation created. You can share the link manually.`
         };
       }
       

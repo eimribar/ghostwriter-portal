@@ -4,7 +4,7 @@
 // =====================================================
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Mail, Phone, Linkedin, CheckCircle, Clock, AlertCircle, Trash2, UserPlus, LogIn, X } from 'lucide-react';
+import { Users, Plus, Edit2, Mail, Phone, Linkedin, CheckCircle, Clock, AlertCircle, AlertTriangle, Trash2, UserPlus, LogIn, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { adminAuthService } from '../services/admin-auth.service';
@@ -217,34 +217,50 @@ const Clients = () => {
   };
 
   const handleSendInvitation = async (client: Client) => {
-    toast.loading('Sending SSO invitation...', { id: 'invite' });
+    toast.loading('Creating SSO invitation...', { id: 'invite' });
 
     try {
       const result = await clientInvitationService.sendInvitation(client.id);
       
-      if (result.success) {
-        // Get the invitation details to show the link
-        const { data: invitation } = await supabase
-          .from('client_invitations')
-          .select('token')
-          .eq('client_id', client.id)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (invitation?.token) {
-          const invitationUrl = `https://unified-linkedin-project.vercel.app/auth?invitation=${invitation.token}`;
+      // Check if invitation was created (even if email failed)
+      if (result.invitationToken || result.invitation?.token) {
+        // Get the token from result or fetch it
+        let token = result.invitationToken || result.invitation?.token;
+        
+        // If we still don't have a token, try to fetch it
+        if (!token) {
+          const { data: invitation } = await supabase
+            .from('client_invitations')
+            .select('token')
+            .eq('client_id', client.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
           
-          // Show success with link and copy button
+          token = invitation?.token;
+        }
+        
+        if (token) {
+          const invitationUrl = `https://unified-linkedin-project.vercel.app/auth?invitation=${token}`;
+          
+          // Show appropriate message based on email status
           toast.custom((t) => (
             <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 max-w-md">
               <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+                {result.emailFailed ? (
+                  <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5" />
+                ) : (
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+                )}
                 <div className="flex-1">
-                  <p className="text-zinc-100 font-medium">Invitation created successfully!</p>
+                  <p className="text-zinc-100 font-medium">
+                    {result.emailFailed ? 'Invitation created (email failed)' : 'Invitation created successfully!'}
+                  </p>
                   <p className="text-zinc-400 text-sm mt-1">
-                    Email should arrive shortly. You can also share this link directly:
+                    {result.emailFailed 
+                      ? 'Email delivery failed, but you can share this link directly:'
+                      : 'Email should arrive shortly. You can also share this link directly:'}
                   </p>
                   <div className="mt-2 p-2 bg-zinc-800 rounded border border-zinc-700">
                     <p className="text-xs text-zinc-500 font-mono break-all">{invitationUrl}</p>
@@ -269,18 +285,20 @@ const Clients = () => {
             </div>
           ), { 
             id: 'invite',
-            duration: 30000 // Show for 30 seconds
+            duration: result.emailFailed ? 60000 : 30000 // Show longer if email failed
           });
         } else {
-          toast.success('SSO invitation sent successfully! Check email for the link.', { id: 'invite' });
+          // No token found at all
+          throw new Error('Failed to retrieve invitation token');
         }
         
         await loadClients();
       } else {
-        throw new Error(result.error || 'Failed to send invitation');
+        // Complete failure - no invitation created
+        throw new Error(result.error || 'Failed to create invitation');
       }
     } catch (error) {
-      console.error('Error sending invitation:', error);
+      console.error('Error with invitation:', error);
       toast.error(`Invitation failed: ${error}`, { id: 'invite' });
     }
   };

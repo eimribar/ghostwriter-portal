@@ -26,7 +26,7 @@ export const clientInvitationService = {
   /**
    * Send invitation to a client for SSO signup with professional email
    */
-  async sendInvitation(clientId: string, customMessage?: string): Promise<{ success: boolean; invitation?: ClientInvitation; error?: string }> {
+  async sendInvitation(clientId: string, customMessage?: string): Promise<{ success: boolean; invitation?: ClientInvitation; error?: string; emailFailed?: boolean; invitationToken?: string }> {
     try {
       console.log('📧 Sending SSO invitation for client:', clientId);
       
@@ -37,30 +37,59 @@ export const clientInvitationService = {
         'Your LinkedIn Content Team'
       );
 
-      if (!result.success) {
-        console.error('Failed to create and send invitation:', result.error);
-        return { success: false, error: result.error };
+      // Check if invitation was created (even if email failed)
+      if (result.invitationId) {
+        // Get invitation details for return
+        const invitation = await this.getClientInvitation(clientId);
+        
+        // If we have a token from the result or the invitation, use it
+        const token = result.invitationToken || invitation?.token || '';
+        
+        if (result.emailFailed) {
+          // Invitation created but email failed
+          console.log('⚠️ Invitation created but email failed:', result.error);
+          return {
+            success: false,
+            emailFailed: true,
+            invitationToken: token,
+            invitation: invitation || {
+              id: result.invitationId,
+              client_id: clientId,
+              email: '',
+              token: token,
+              status: 'pending',
+              sent_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            },
+            error: result.error
+          };
+        }
+        
+        // Full success
+        console.log('✅ Professional invitation email sent:', result);
+        return { 
+          success: true,
+          invitationToken: token,
+          invitation: invitation || {
+            id: result.invitationId,
+            client_id: clientId,
+            email: '',
+            token: token,
+            status: 'pending',
+            sent_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        };
       }
 
-      console.log('✅ Professional invitation email sent:', result);
-
-      // Get invitation details for return
-      const invitation = await this.getClientInvitation(clientId);
+      // Complete failure - no invitation created
+      console.error('Failed to create invitation:', result.error);
+      return { success: false, error: result.error || 'Failed to create invitation' };
       
-      return { 
-        success: true, 
-        invitation: invitation || {
-          id: result.invitationId || '',
-          client_id: clientId,
-          email: '', // Will be populated from client record
-          token: '',
-          status: 'pending',
-          sent_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      };
     } catch (err) {
       console.error('Error sending invitation:', err);
       return { success: false, error: 'Unexpected error occurred' };
