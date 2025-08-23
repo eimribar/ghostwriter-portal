@@ -19,6 +19,7 @@ import ClientFeedback from './pages/ClientFeedback';
 import ContentCalendar from './pages/ContentCalendar';
 import Prompts from './pages/Prompts';
 import SlackSettings from './pages/SlackSettings';
+import AdminClientAuth from './pages/AdminClientAuth';
 
 // Start background processor for search jobs
 import './services/background-processor.service';
@@ -50,6 +51,7 @@ const AppWithClientSwitch = () => {
           <Route path="/prompts" element={<Prompts />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/clients" element={<Clients />} />
+          <Route path="/admin-client-auth" element={<AdminClientAuth />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/slack-settings" element={<SlackSettings />} />
           <Route path="/settings" element={<Settings />} />

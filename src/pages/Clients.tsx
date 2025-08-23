@@ -4,9 +4,11 @@
 // =====================================================
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Mail, Phone, Linkedin, CheckCircle, Clock, AlertCircle, Trash2, UserPlus } from 'lucide-react';
+import { Users, Plus, Edit2, Mail, Phone, Linkedin, CheckCircle, Clock, AlertCircle, Trash2, UserPlus, LogIn } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
+import { adminAuthService } from '../services/admin-auth.service';
+import { clientInvitationService } from '../services/client-invitation.service';
 import toast from 'react-hot-toast';
 import ClientOnboarding from '../components/ClientOnboarding';
 
@@ -51,6 +53,7 @@ const Clients = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paused' | 'onboarding'>('all');
+  const [impersonating, setImpersonating] = useState<string | null>(null);
 
   // Load clients from database
   useEffect(() => {
@@ -161,6 +164,73 @@ const Clients = () => {
     } catch (error) {
       console.error('Error updating client status:', error);
       toast.error('Failed to update client status');
+    }
+  };
+
+  const handleImpersonate = async (client: Client) => {
+    if (impersonating) {
+      toast.error('Already impersonating another client');
+      return;
+    }
+
+    // Check if client has portal access and auth_user_id
+    if (!client.portal_access) {
+      toast.error('Client does not have portal access enabled');
+      return;
+    }
+
+    if (!client.user_id) {
+      toast.error('Client has not completed SSO setup yet');
+      return;
+    }
+
+    setImpersonating(client.id);
+    toast.loading('Creating impersonation session...', { id: 'impersonate' });
+
+    try {
+      const result = await adminAuthService.createImpersonationToken(
+        client.id,
+        'Admin debugging session via Clients page',
+        null,
+        navigator.userAgent
+      );
+
+      if (result.success && result.session) {
+        const impersonationUrl = adminAuthService.generateImpersonationUrl(result.session.token);
+        
+        // Open client portal in new tab with impersonation token
+        window.open(impersonationUrl, '_blank');
+        
+        toast.success('Impersonation session created! Opening client portal...', { id: 'impersonate' });
+        
+        // Refresh client data
+        await loadClients();
+      } else {
+        throw new Error(result.error || 'Failed to create impersonation session');
+      }
+    } catch (error) {
+      console.error('Error creating impersonation:', error);
+      toast.error(`Impersonation failed: ${error}`, { id: 'impersonate' });
+    } finally {
+      setImpersonating(null);
+    }
+  };
+
+  const handleSendInvitation = async (client: Client) => {
+    toast.loading('Sending SSO invitation...', { id: 'invite' });
+
+    try {
+      const result = await clientInvitationService.sendInvitation(client.id);
+      
+      if (result.success) {
+        toast.success('SSO invitation sent successfully!', { id: 'invite' });
+        await loadClients();
+      } else {
+        throw new Error(result.error || 'Failed to send invitation');
+      }
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      toast.error(`Invitation failed: ${error}`, { id: 'invite' });
     }
   };
 
@@ -365,9 +435,34 @@ const Clients = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-4 border-t border-zinc-800">
+                  {/* Login as Client button - only show if client has completed SSO setup */}
+                  {client.portal_access && client.user_id && (
+                    <button
+                      onClick={() => handleImpersonate(client)}
+                      disabled={impersonating === client.id}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Login as this client (impersonation)"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      {impersonating === client.id ? 'Opening...' : 'Login as Client'}
+                    </button>
+                  )}
+                  
+                  {/* Send Invitation button - only show if client hasn't completed SSO setup */}
+                  {client.portal_access && !client.user_id && (
+                    <button
+                      onClick={() => handleSendInvitation(client)}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      title="Send SSO invitation email"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Send Invitation
+                    </button>
+                  )}
+                  
                   <button
                     onClick={() => setSelectedClient(client)}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors text-sm"
+                    className="flex items-center justify-center gap-1 px-3 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors text-sm"
                   >
                     <Edit2 className="w-4 h-4" />
                     Edit
@@ -377,7 +472,7 @@ const Clients = () => {
                       client.id,
                       client.status === 'active' ? 'paused' : 'active'
                     )}
-                    className="flex-1 px-3 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors text-sm"
+                    className="px-3 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors text-sm"
                   >
                     {client.status === 'active' ? 'Pause' : 'Activate'}
                   </button>
@@ -393,9 +488,11 @@ const Clients = () => {
                 {client.portal_access && (
                   <div className="mt-3 pt-3 border-t border-zinc-800">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-green-500">Portal Access Enabled</span>
-                      {client.mobile_pin && (
-                        <span className="text-zinc-500">PIN: {client.mobile_pin}</span>
+                      <span className="text-green-500">✓ SSO Portal Access</span>
+                      {client.user_id ? (
+                        <span className="text-blue-400">✓ SSO Active</span>
+                      ) : (
+                        <span className="text-yellow-500">⏳ Invitation Pending</span>
                       )}
                     </div>
                   </div>

@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Check, ChevronRight, User, Building, Mail, Globe, Settings, Send } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { clientInvitationService } from '../services/client-invitation.service';
 import toast from 'react-hot-toast';
 
 interface ClientOnboardingProps {
@@ -33,10 +34,9 @@ interface OnboardingData {
   content_formats: string[];
   avoid_topics: string[];
   
-  // Portal Access
+  // Portal Access (always enabled for SSO)
   portal_access: boolean;
   send_invitation: boolean;
-  mobile_pin?: string;
 }
 
 const STEPS = [
@@ -81,9 +81,8 @@ export const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete, 
     content_topics: [],
     content_formats: [],
     avoid_topics: [],
-    portal_access: true,
-    send_invitation: true,
-    mobile_pin: '',
+    portal_access: true, // Always enabled for SSO
+    send_invitation: true, // Always send invitation
   });
 
   const updateData = (field: keyof OnboardingData, value: any) => {
@@ -158,8 +157,9 @@ export const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete, 
           avoid: data.avoid_topics,
         },
         status: 'active',
-        portal_access: data.portal_access,
-        mobile_pin: data.mobile_pin || null,
+        portal_access: true, // Always enabled for SSO
+        invitation_status: 'pending', // Set initial invitation status
+        auth_status: 'not_invited', // Set initial auth status
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -184,19 +184,19 @@ export const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete, 
         throw clientError;
       }
 
-      // If portal access is enabled and invitation should be sent
-      if (data.portal_access && data.send_invitation && newClient) {
-        // Send invitation email
-        await fetch('/api/send-invitation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clientId: newClient.id,
-            email: data.email,
-            name: data.name,
-            mobilePin: data.mobile_pin,
-          }),
-        });
+      // Always send SSO invitation for new clients
+      if (newClient && data.send_invitation) {
+        console.log('🎯 Sending SSO invitation to client:', newClient.id);
+        
+        const invitationResult = await clientInvitationService.sendInvitation(newClient.id);
+        
+        if (invitationResult.success) {
+          console.log('✅ Invitation sent successfully');
+          toast.success('Invitation sent! Client will receive SSO signup instructions.');
+        } else {
+          console.error('❌ Failed to send invitation:', invitationResult.error);
+          toast.error(`Invitation failed: ${invitationResult.error}`);
+        }
       }
 
       toast.success(`Successfully onboarded ${data.name}!`);
@@ -461,65 +461,63 @@ export const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete, 
       case 5:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-zinc-100">Portal Access</h3>
+            <h3 className="text-lg font-semibold text-zinc-100">SSO Portal Access</h3>
             
+            <div className="bg-blue-600/10 border border-blue-600/20 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Mail className="w-5 h-5 text-blue-400" />
+                <h4 className="text-sm font-medium text-blue-400">Modern SSO Authentication</h4>
+              </div>
+              <p className="text-sm text-zinc-300">
+                This client will receive secure SSO (Single Sign-On) access with support for Google, GitHub, and email authentication.
+              </p>
+            </div>
+
             <div className="space-y-4">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={data.portal_access}
-                  onChange={e => updateData('portal_access', e.target.checked)}
-                  className="w-5 h-5 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-zinc-300">Enable client portal access</span>
-              </label>
+              <div className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+                <div>
+                  <span className="text-zinc-300 font-medium">Portal Access</span>
+                  <p className="text-sm text-zinc-500">Client portal with approval interface</p>
+                </div>
+                <div className="text-green-400 font-medium">✓ Enabled</div>
+              </div>
 
-              {data.portal_access && (
-                <>
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={data.send_invitation}
-                      onChange={e => updateData('send_invitation', e.target.checked)}
-                      className="w-5 h-5 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-zinc-300">Send invitation email</span>
-                  </label>
-
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-2">
-                      Mobile App PIN (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={data.mobile_pin}
-                      onChange={e => updateData('mobile_pin', e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="w-32 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-100 focus:border-blue-500 focus:outline-none"
-                      placeholder="123456"
-                      maxLength={6}
-                    />
-                    <p className="text-xs text-zinc-500 mt-1">6-digit PIN for mobile app access</p>
-                  </div>
-                </>
-              )}
+              <div className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+                <div>
+                  <span className="text-zinc-300 font-medium">SSO Invitation</span>
+                  <p className="text-sm text-zinc-500">Email invitation with secure signup link</p>
+                </div>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={data.send_invitation}
+                    onChange={e => updateData('send_invitation', e.target.checked)}
+                    className="w-5 h-5 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-zinc-300">Send Now</span>
+                </label>
+              </div>
             </div>
 
             <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-zinc-300 mb-2">What happens next?</h4>
-              <ul className="text-sm text-zinc-500 space-y-1">
-                {data.portal_access && data.send_invitation && (
-                  <li>• An invitation email will be sent to {data.email}</li>
-                )}
-                {data.portal_access && (
-                  <>
-                    <li>• Client can log in to review and approve content</li>
-                    <li>• Client can provide feedback on generated posts</li>
-                    {data.mobile_pin && <li>• Client can use mobile app with PIN: {data.mobile_pin}</li>}
-                  </>
-                )}
-                {!data.portal_access && (
-                  <li>• Content will be managed entirely through the admin portal</li>
-                )}
+              <h4 className="text-sm font-medium text-zinc-300 mb-3">What happens next?</h4>
+              <ul className="text-sm text-zinc-500 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">1.</span>
+                  <span>Invitation email sent to <strong className="text-zinc-300">{data.email}</strong></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">2.</span>
+                  <span>Client clicks invitation link and chooses authentication method</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">3.</span>
+                  <span>Client gains access to beautiful approval portal</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">4.</span>
+                  <span>You can impersonate client for debugging if needed</span>
+                </li>
               </ul>
             </div>
           </div>
@@ -576,26 +574,24 @@ export const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete, 
               </div>
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-zinc-400 mb-3">Portal Access</h4>
+                <h4 className="text-sm font-medium text-zinc-400 mb-3">SSO Portal Access</h4>
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-zinc-500">Portal Access:</dt>
-                    <dd className="text-zinc-300">{data.portal_access ? 'Enabled' : 'Disabled'}</dd>
+                    <dd className="text-green-400 font-medium">✓ SSO Enabled</dd>
                   </div>
-                  {data.portal_access && (
-                    <>
-                      <div className="flex justify-between">
-                        <dt className="text-zinc-500">Send Invitation:</dt>
-                        <dd className="text-zinc-300">{data.send_invitation ? 'Yes' : 'No'}</dd>
-                      </div>
-                      {data.mobile_pin && (
-                        <div className="flex justify-between">
-                          <dt className="text-zinc-500">Mobile PIN:</dt>
-                          <dd className="text-zinc-300">{data.mobile_pin}</dd>
-                        </div>
-                      )}
-                    </>
-                  )}
+                  <div className="flex justify-between">
+                    <dt className="text-zinc-500">Authentication:</dt>
+                    <dd className="text-zinc-300">Google, GitHub, Email</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-zinc-500">Send Invitation:</dt>
+                    <dd className="text-zinc-300">{data.send_invitation ? 'Yes' : 'No'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-zinc-500">Admin Control:</dt>
+                    <dd className="text-blue-400">Impersonation Available</dd>
+                  </div>
                 </dl>
               </div>
             </div>
