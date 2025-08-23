@@ -349,12 +349,12 @@ LinkedIn Content Management Team
       // Send email via Vercel function
       try {
         const apiUrl = import.meta.env.PROD 
-          ? '/api/send-invitation'
+          ? 'https://ghostwriter-portal.vercel.app/api/send-invitation'
           : '/api/send-invitation';
 
         console.log('📧 Attempting to send email via:', apiUrl);
         console.log('Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
-        console.log('Full URL would be:', window.location.origin + apiUrl);
+        console.log('Full URL:', apiUrl);
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -452,7 +452,7 @@ LinkedIn Content Management Team
 
       // Send email
       const apiUrl = import.meta.env.PROD 
-        ? '/api/send-invitation'
+        ? 'https://ghostwriter-portal.vercel.app/api/send-invitation'
         : '/api/send-invitation';
 
       const response = await fetch(apiUrl, {
