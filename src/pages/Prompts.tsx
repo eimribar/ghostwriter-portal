@@ -384,7 +384,7 @@ const Prompts = () => {
                 ref={fileInputRef}
               />
               <button
-                onClick={() => fileInputRef?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 className="px-3 py-2 border border-zinc-200 text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors flex items-center gap-2"
                 title="Import prompts from JSON file"
               >

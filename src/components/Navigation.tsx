@@ -4,10 +4,13 @@ import { cn } from '../lib/utils';
 import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { generatedContentService } from '../services/database.service';
+import { ClientSwitcher } from './ClientSwitcher';
+import { useClientSwitch } from '../contexts/ClientSwitchContext';
 
 const Navigation = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const { activeClient } = useClientSwitch();
   const [pendingCount, setPendingCount] = useState(0);
   
   useEffect(() => {
@@ -42,11 +45,39 @@ const Navigation = () => {
 
   return (
     <nav className="w-64 bg-white border-r border-zinc-200 h-screen p-4 flex flex-col">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-xl font-bold text-zinc-900">Ghostwriter Portal</h1>
         <p className="text-sm text-zinc-500 mt-1">Content Engine Admin</p>
         {user && (
           <p className="text-xs text-zinc-400 mt-2">{user.email}</p>
+        )}
+      </div>
+
+      {/* Client Switcher */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wide">
+            Active Client
+          </h3>
+          {activeClient && (
+            <span className="text-xs text-zinc-400">
+              {activeClient.industry || 'General'}
+            </span>
+          )}
+        </div>
+        <ClientSwitcher className="w-full" />
+        {activeClient && (
+          <div className="mt-2 p-2 bg-zinc-50 rounded-lg">
+            <div className="text-xs text-zinc-600">
+              <div className="font-medium">{activeClient.company}</div>
+              <div className="text-zinc-500 mt-0.5">
+                {activeClient.content_preferences?.tone?.slice(0, 2).join(', ')}
+                {activeClient.content_preferences?.tone && activeClient.content_preferences.tone.length > 2 && (
+                  <span> +{activeClient.content_preferences.tone.length - 2} more</span>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

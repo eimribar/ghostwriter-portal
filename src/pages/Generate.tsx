@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe, Zap, Plus } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations, generateWithPrompt } from '../lib/llm-service';
 import { generatedContentService, clientsService, promptTemplatesService, type Client, type PromptTemplate } from '../services/database.service';
@@ -361,6 +361,39 @@ const Generate = () => {
               </div>
             </div>
 
+            {/* Variation Settings */}
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-zinc-700 mb-2 block">
+                  Number of Variations
+                </label>
+                <select
+                  value={numberOfVariations}
+                  onChange={(e) => setNumberOfVariations(Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                    <option key={num} value={num}>
+                      {num} variation{num > 1 ? 's' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-700 mb-2 block">
+                  Variation Strategy
+                </label>
+                <select
+                  value={variationStrategy}
+                  onChange={(e) => setVariationStrategy(e.target.value as 'same-prompt' | 'different-prompts' | 'mixed-category')}
+                  className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                >
+                  <option value="different-prompts">Different prompts</option>
+                  <option value="same-prompt">Same prompt (temp variation)</option>
+                  <option value="mixed-category">Mixed categories</option>
+                </select>
+              </div>
+            </div>
 
             {/* Generate Button */}
             <button
