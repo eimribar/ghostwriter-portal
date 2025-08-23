@@ -1,6 +1,6 @@
 import { apiConfig } from './api-config';
-import { linkedinPromptTemplates } from './linkedin-prompts';
 import type { PromptTemplate } from '../services/database.service';
+import { promptTemplatesService } from '../services/database.service';
 
 export interface GenerateContentRequest {
   prompt: string;
@@ -290,7 +290,7 @@ export async function generateContent(request: GenerateContentRequest): Promise<
   }
 }
 
-// Generate LinkedIn content with different style variations
+// Generate LinkedIn content using database prompts only
 export async function generateLinkedInVariations(
   contentIdea: string,
   count: number = 4,
@@ -298,56 +298,67 @@ export async function generateLinkedInVariations(
 ): Promise<GenerateContentResponse[]> {
   console.log('generateLinkedInVariations called with:', { contentIdea, count, urls: urls?.length });
   console.log('Google API Key configured:', !!apiConfig.google.apiKey);
-  console.log('API Key length:', apiConfig.google.apiKey?.length);
   
   // Check if Google/Gemini is configured
   if (!apiConfig.google.apiKey) {
-    console.warn('No Google API key found, using mock data');
-    // Fallback to mock data
-    const mockVariations: GenerateContentResponse[] = [];
-    for (let i = 0; i < count; i++) {
-      mockVariations.push({
-        content: generateMockContent(contentIdea),
-        provider: 'google',
-        model: 'mock',
-      });
+    throw new Error('Google API key not configured. Please add VITE_GOOGLE_API_KEY to your environment variables.');
+  }
+
+  // Load prompts from database
+  let templates: PromptTemplate[];
+  try {
+    const allPrompts = await promptTemplatesService.getAll();
+    templates = allPrompts.filter(p => p.category === 'Content Generation' && p.is_active);
+    
+    if (templates.length === 0) {
+      throw new Error('No active Content Generation prompts found. Please create prompts in the Prompts management page.');
     }
-    return mockVariations;
+    
+    console.log(`Found ${templates.length} active Content Generation prompts`);
+  } catch (error) {
+    console.error('Error loading prompts from database:', error);
+    throw new Error('Failed to load prompts from database. Please check your database connection and ensure prompts exist.');
   }
 
   const variations: Promise<GenerateContentResponse>[] = [];
   
-  // Use the first 4 LinkedIn prompt templates
-  const templates = linkedinPromptTemplates.slice(0, Math.min(count, 4));
-  
-  console.log('Using LinkedIn templates:', templates.map(t => t.name));
-  
-  // Generate content using each template with different styles
-  for (let i = 0; i < templates.length; i++) {
-    const template = templates[i];
-    console.log(`Generating variation ${i + 1} with template: ${template.name}`);
-    variations.push(
-      callGoogle(
-        contentIdea,
-        1.5, // Temperature 1.5 for extreme creativity
-        1048576, // Use full 1 million token capacity
-        template.systemMessage,
-        urls // Pass URLs if provided
-      )
-    );
-  }
-  
-  // If we need more than 4 variations, repeat with different temperatures
-  if (count > 4) {
-    for (let i = 4; i < count; i++) {
-      const template = templates[i % templates.length];
+  // Use available templates, cycling through if we need more variations than templates
+  for (let i = 0; i < count; i++) {
+    const template = templates[i % templates.length];
+    const temperature = (template.settings?.temperature || 1.5) + (i * 0.1); // Slight temperature variation
+    const maxTokens = template.settings?.max_tokens || 1048576;
+    
+    console.log(`Generating variation ${i + 1} with template: ${template.name} (temp: ${temperature})`);
+    
+    if (template.provider === 'google') {
       variations.push(
         callGoogle(
           contentIdea,
-          1.5, // Temperature 1.5
-          1048576, // 1 million tokens
-          template.systemMessage,
-          urls // Pass URLs if provided
+          temperature,
+          maxTokens,
+          template.system_message,
+          urls
+        )
+      );
+    } else if (template.provider === 'openai') {
+      const fullPrompt = `${template.system_message}\n\nContent Idea: ${contentIdea}`;
+      variations.push(
+        callOpenAI(fullPrompt, temperature, maxTokens)
+      );
+    } else if (template.provider === 'anthropic') {
+      const fullPrompt = `${template.system_message}\n\nContent Idea: ${contentIdea}`;
+      variations.push(
+        callAnthropic(fullPrompt, temperature, maxTokens)
+      );
+    } else {
+      // Default to Google
+      variations.push(
+        callGoogle(
+          contentIdea,
+          temperature,
+          maxTokens,
+          template.system_message,
+          urls
         )
       );
     }
@@ -423,11 +434,53 @@ export async function generateWithPrompt(
   return Promise.all(variations);
 }
 
-// Generate multiple variations (legacy function for backward compatibility)
+// Generate multiple variations using database prompts
 export async function generateVariations(
   prompt: string,
-  count: number = 6
+  count: number = 6,
+  category: string = 'Content Generation'
 ): Promise<GenerateContentResponse[]> {
-  // Use the new LinkedIn-specific generation
-  return generateLinkedInVariations(prompt, count);
+  console.log(`generateVariations called for category: ${category}`);
+  
+  // Load prompts from database based on category
+  let templates: PromptTemplate[];
+  try {
+    const allPrompts = await promptTemplatesService.getAll();
+    templates = allPrompts.filter(p => p.category === category && p.is_active);
+    
+    if (templates.length === 0) {
+      throw new Error(`No active prompts found for category: ${category}. Please create prompts in the Prompts management page.`);
+    }
+    
+    console.log(`Found ${templates.length} active prompts for category: ${category}`);
+  } catch (error) {
+    console.error('Error loading prompts from database:', error);
+    throw new Error('Failed to load prompts from database.');
+  }
+
+  const variations: Promise<GenerateContentResponse>[] = [];
+  
+  for (let i = 0; i < count; i++) {
+    const template = templates[i % templates.length];
+    const temperature = (template.settings?.temperature || 1.0) + (i * 0.1);
+    const maxTokens = template.settings?.max_tokens || 1000;
+    
+    if (template.provider === 'google') {
+      variations.push(
+        callGoogle(prompt, temperature, maxTokens, template.system_message)
+      );
+    } else if (template.provider === 'openai') {
+      const fullPrompt = `${template.system_message}\n\nTask: ${prompt}`;
+      variations.push(
+        callOpenAI(fullPrompt, temperature, maxTokens)
+      );
+    } else if (template.provider === 'anthropic') {
+      const fullPrompt = `${template.system_message}\n\nTask: ${prompt}`;
+      variations.push(
+        callAnthropic(fullPrompt, temperature, maxTokens)
+      );
+    }
+  }
+  
+  return Promise.all(variations);
 }

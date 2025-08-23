@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe, Zap, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations, generateWithPrompt } from '../lib/llm-service';
 import { generatedContentService, clientsService, promptTemplatesService, type Client, type PromptTemplate } from '../services/database.service';
@@ -29,7 +29,8 @@ const Generate = () => {
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<string>('');
   const [showPromptDetails, setShowPromptDetails] = useState(false);
-  const [useCustomPrompts, setUseCustomPrompts] = useState(true);
+  const [numberOfVariations, setNumberOfVariations] = useState(4);
+  const [variationStrategy, setVariationStrategy] = useState<'same-prompt' | 'different-prompts' | 'mixed-category'>('different-prompts');
 
   useEffect(() => {
     loadClients();
@@ -59,11 +60,13 @@ const Generate = () => {
       // Select first prompt by default
       if (contentPrompts.length > 0) {
         setSelectedPrompt(contentPrompts[0].id);
+      } else {
+        // Show error if no prompts available
+        alert('No Content Generation prompts found. Please create prompts in the Prompts management page first.');
       }
     } catch (error) {
       console.error('Error loading prompts:', error);
-      // Fall back to hardcoded prompts
-      setUseCustomPrompts(false);
+      alert('Failed to load prompts from database. Please check your connection and ensure prompts exist.');
     }
   };
 
@@ -73,13 +76,18 @@ const Generate = () => {
       return;
     }
 
-    if (useCustomPrompts && !selectedPrompt) {
+    if (!selectedPrompt && prompts.length === 0) {
+      alert('No prompts available. Please create Content Generation prompts first.');
+      return;
+    }
+    
+    if (!selectedPrompt) {
       alert('Please select a prompt template');
       return;
     }
 
     console.log('Starting generation for:', contentIdea);
-    console.log('Using custom prompts:', useCustomPrompts);
+    console.log('Using database prompts');
     console.log('Selected prompt:', selectedPrompt);
 
     // Auto-extract URLs from the content idea text
@@ -99,19 +107,19 @@ const Generate = () => {
     try {
       let results;
       
-      if (useCustomPrompts && selectedPrompt) {
-        // Use selected prompt from database
-        const prompt = prompts.find(p => p.id === selectedPrompt);
-        if (prompt) {
-          // Generate variations using the selected prompt with URLs
-          results = await generateWithPrompt(contentIdea, prompt, 4, urls);
-        } else {
-          // Fallback to hardcoded prompts with URLs
-          results = await generateLinkedInVariations(contentIdea, 4, urls);
-        }
+      const prompt = prompts.find(p => p.id === selectedPrompt);
+      if (prompt && variationStrategy === 'same-prompt') {
+        // Use same prompt with temperature variations
+        results = await generateWithPrompt(contentIdea, prompt, numberOfVariations, urls);
+      } else if (variationStrategy === 'different-prompts') {
+        // Use different prompts from Content Generation category
+        results = await generateLinkedInVariations(contentIdea, numberOfVariations, urls);
+      } else if (variationStrategy === 'mixed-category') {
+        // Mix prompts from different categories (future feature)
+        results = await generateLinkedInVariations(contentIdea, numberOfVariations, urls);
       } else {
-        // Use hardcoded LinkedIn prompt templates with URLs
-        results = await generateLinkedInVariations(contentIdea, 4, urls);
+        // Default to LinkedIn variations
+        results = await generateLinkedInVariations(contentIdea, numberOfVariations, urls);
       }
       
       const newVariations: GeneratedVariation[] = results.map((result, index) => {
@@ -140,7 +148,8 @@ const Generate = () => {
       await saveToDatabase(newVariations);
     } catch (error) {
       console.error('Generation error:', error);
-      alert('Failed to generate content. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to generate content: ${errorMessage}. Please check your prompts and API configuration.`);
     }
     
     setGenerating(false);
@@ -265,16 +274,17 @@ const Generate = () => {
                   <Settings className="w-4 h-4" />
                   Prompt Template
                 </label>
-                <button
-                  onClick={() => setUseCustomPrompts(!useCustomPrompts)}
-                  className="text-xs text-zinc-600 hover:text-zinc-900 underline"
+                <a
+                  href="/prompts"
+                  target="_blank"
+                  className="text-xs text-blue-600 hover:text-blue-700 underline flex items-center gap-1"
                 >
-                  {useCustomPrompts ? 'Use Default Prompts' : 'Use Custom Prompts'}
-                </button>
+                  Manage Prompts
+                  <Plus className="w-3 h-3" />
+                </a>
               </div>
               
-              {useCustomPrompts ? (
-                <>
+              <div>
                   <select
                     value={selectedPrompt}
                     onChange={(e) => {
@@ -323,12 +333,7 @@ const Generate = () => {
                       </pre>
                     </div>
                   )}
-                </>
-              ) : (
-                <div className="p-3 bg-zinc-50 rounded-lg text-sm text-zinc-600">
-                  Using default LinkedIn prompt templates (RevOps, SaaStr, Sales, Data)
-                </div>
-              )}
+              </div>
             </div>
 
             {/* Content Idea Input */}
@@ -376,7 +381,7 @@ const Generate = () => {
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  Generate Variations
+                  Generate {numberOfVariations} Variation{numberOfVariations > 1 ? 's' : ''}
                 </>
               )}
             </button>
