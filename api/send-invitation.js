@@ -3,10 +3,6 @@
 // Sends professional SSO invitation emails via Resend
 // =====================================================
 
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY);
-
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -28,17 +24,20 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Check if API key exists
-  const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
-  if (!apiKey) {
-    console.error('❌ Missing RESEND_API_KEY in environment variables');
-    return res.status(500).json({ 
-      error: 'Email service not configured', 
-      details: 'RESEND_API_KEY is missing from environment variables' 
-    });
-  }
-
   try {
+    // Check if API key exists
+    const resendKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
+    if (!resendKey) {
+      console.error('❌ Missing RESEND_API_KEY in environment variables');
+      return res.status(500).json({ 
+        error: 'Email service not configured', 
+        details: 'RESEND_API_KEY is missing from environment variables' 
+      });
+    }
+
+    // Dynamic import of Resend (like the working functions)
+    const { Resend } = await import('resend');
+    const resend = new Resend(resendKey);
     const { 
       to, 
       subject, 
@@ -56,9 +55,11 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log(`📧 Sending ${isResend ? 'resent ' : ''}invitation email to:`, to);
+    console.log(`📧 API Function called! Sending ${isResend ? 'resent ' : ''}invitation email to:`, to);
     console.log('Client:', clientName);
     console.log('Invitation ID:', invitationId);
+    console.log('API Key exists:', !!resendKey);
+    console.log('API Key starts with:', resendKey?.substring(0, 10));
 
     // Send email using Resend
     const email = await resend.emails.send({
