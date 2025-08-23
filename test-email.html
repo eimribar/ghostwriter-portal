@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Email API</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Test Email API</h1>
+    
+    <h2>Test 1: Direct API Call (Production)</h2>
+    <button onclick="testProduction()">Test Production API</button>
+    <pre id="prod-result"></pre>
+    
+    <h2>Test 2: Relative URL</h2>
+    <button onclick="testRelative()">Test Relative URL</button>
+    <pre id="rel-result"></pre>
+    
+    <h2>Test 3: Direct Resend API (from browser)</h2>
+    <button onclick="testDirect()">Test Direct Resend</button>
+    <pre id="direct-result"></pre>
+
+    <script>
+        async function testProduction() {
+            const result = document.getElementById('prod-result');
+            result.textContent = 'Calling...';
+            
+            try {
+                const response = await fetch('https://ghostwriter-portal.vercel.app/api/test-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: true })
+                });
+                
+                const data = await response.json();
+                result.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">
+                    Status: ${response.status}
+                    ${JSON.stringify(data, null, 2)}
+                </span>`;
+            } catch (err) {
+                result.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+            }
+        }
+        
+        async function testRelative() {
+            const result = document.getElementById('rel-result');
+            result.textContent = 'Calling...';
+            
+            try {
+                const response = await fetch('/api/test-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: true })
+                });
+                
+                const data = await response.json();
+                result.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">
+                    Status: ${response.status}
+                    ${JSON.stringify(data, null, 2)}
+                </span>`;
+            } catch (err) {
+                result.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+            }
+        }
+        
+        async function testDirect() {
+            const result = document.getElementById('direct-result');
+            result.textContent = 'Calling Resend directly...';
+            
+            try {
+                const response = await fetch('https://api.resend.com/emails', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer re_Vawe4nHB_BiRgoqiZmw1cWXjTyHZFBzS1',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        from: 'Acme <onboarding@resend.dev>',
+                        to: 'eimrib@yess.ai',
+                        subject: 'Direct Browser Test',
+                        html: '<p>Sent directly from browser!</p>'
+                    })
+                });
+                
+                const data = await response.json();
+                result.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">
+                    Status: ${response.status}
+                    ${JSON.stringify(data, null, 2)}
+                </span>`;
+            } catch (err) {
+                result.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
