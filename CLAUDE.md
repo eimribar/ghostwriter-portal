@@ -3,6 +3,8 @@
 ## Project Overview
 **Ghostwriter Portal** - Admin dashboard for LinkedIn content generation and management. Part of a dual-portal system with the User Portal for client-facing interactions.
 
+**MAJOR UPDATE (August 23, 2025)**: Complete workflow reorganization with client isolation, separate approval stages, and archive system.
+
 ## Tech Stack
 - **Frontend**: React 18 with TypeScript
 - **Build Tool**: Vite 7.1.2
@@ -39,14 +41,16 @@ ghostwriter-portal/
 │   │   ├── api-config.ts      # API configurations
 │   │   └── llm-service.ts     # Database-driven AI service (NO hardcoded prompts)
 │   ├── pages/
-│   │   ├── Generate.tsx       # Content generation (no client required)
-│   │   ├── Approval.tsx       # Content approval queue
-│   │   ├── Prompts.tsx        # Complete prompt management system with testing & bulk ops
-│   │   ├── Ideation.tsx       # Content ideation with GPT-5 web search
-│   │   ├── Schedule.tsx       # Post scheduling
-│   │   ├── Clients.tsx        # Client management
-│   │   ├── Analytics.tsx      # Performance metrics
-│   │   └── SlackSettings.tsx  # Slack integration management (NEW)
+│   │   ├── Generate.tsx         # Content generation (client-aware)
+│   │   ├── Approval.tsx         # Admin approval for drafts only
+│   │   ├── ClientFeedback.tsx   # Handle client responses (NEW)
+│   │   ├── ContentCalendar.tsx  # Schedule and track content (NEW)
+│   │   ├── Prompts.tsx          # Complete prompt management system
+│   │   ├── Ideation.tsx         # Content ideation with GPT-5 web search
+│   │   ├── Schedule.tsx         # Post scheduling
+│   │   ├── Clients.tsx          # Client management
+│   │   ├── Analytics.tsx        # Performance metrics
+│   │   └── SlackSettings.tsx    # Slack integration management
 │   ├── services/
 │   │   ├── database.service.ts         # Database operations
 │   │   ├── gpt5-responses.service.ts   # GPT-5 Responses API
@@ -61,7 +65,11 @@ ghostwriter-portal/
 │   ├── create_search_jobs_table.sql    # Background jobs table
 │   ├── create_prompt_templates_table.sql # Prompt system schema
 │   ├── populate_prompts.sql            # LinkedIn prompts data
-│   ├── create_slack_tables.sql        # Slack integration schema (NEW)
+│   ├── create_slack_tables.sql        # Slack integration schema
+│   ├── create_notifications_system.sql # Notification system (NEW)
+│   ├── add_archive_and_scheduling_fields.sql # Archive & scheduling (NEW)
+│   ├── run_this_in_supabase_FIXED.sql # Fixed notification setup (NEW)
+│   ├── fix_notifications_trigger.sql   # Trigger fixes (NEW)
 │   └── FINAL_FIX_DATABASE.sql         # Database fixes
 ├── Documentation/
 │   ├── CLAUDE.md              # This file - main documentation
@@ -108,7 +116,57 @@ VITE_ENV=production
 
 ## Key Features
 
-### 1. Slack Integration (`/slack-settings`) - NEW ✨
+### 🚀 NEW: Three-Page Approval Workflow (August 23, 2025)
+
+#### **1. Admin Approval** (`/approval`) 
+**Purpose**: Review newly generated content before sending to clients
+- **Shows Only**: Draft and admin-rejected content
+- **Client Isolation**: Filters by active client automatically
+- **Clean Stats**: Pending review, needs revision, unassigned counts
+- **Actions**: 
+  - Approve → Sends to client (status: `admin_approved`)
+  - Reject → Returns for revision (status: `admin_rejected`)
+  - Edit → In-line content editing
+  - Assign Client → For unassigned content
+
+#### **2. Client Feedback** (`/client-feedback`) - NEW ✨
+**Purpose**: Handle all client responses in one dedicated space
+- **Shows Only**: Content with client actions (approved/rejected/edited)
+- **Three Sections**:
+  - 🟢 **Client Approved** → Schedule to calendar or Archive
+  - 🔴 **Client Rejected** → Edit & Resend to client or Archive (shows rejection reason)
+  - 🟡 **Client Edited** → Review changes and approve or send back
+- **Client Isolation**: Only shows feedback for active client
+- **Archive System**: Clean up dashboard by archiving handled content
+- **Auto-refresh**: Every 30 seconds to catch new responses
+
+#### **3. Content Calendar** (`/calendar`) - NEW ✨
+**Purpose**: Schedule and track approved content publication
+- **Three Views**:
+  - 📋 **Ready to Schedule**: Client-approved content awaiting scheduling
+  - 📅 **Scheduled**: Content with scheduled publication dates
+  - ✅ **Posted**: Published content with post URLs
+- **Grid Layout**: Visual calendar cards for easy management
+- **Actions**:
+  - Schedule with date/time picker
+  - Mark as posted with optional URL
+  - Archive completed content
+- **Publication Tracking**: Track scheduling, posting dates, and URLs
+
+### **Client Isolation System** - MAJOR ENHANCEMENT ✨
+- **Complete Separation**: Each client's content stays completely separate
+- **Client Switcher**: Select active client in navigation sidebar
+- **Filtered Views**: All pages respect the selected client
+- **Visual Indicators**: Clear display of which client you're viewing
+- **Badge Counts**: Navigation badges update based on active client
+
+### **Archive System** - NEW ✨
+- **Clean Dashboard**: Archive completed, rejected, or outdated content
+- **Database Fields**: `archived`, `archived_at`, `archived_reason`
+- **Smart Filtering**: Archived content excluded from all active views
+- **Retention**: Content not deleted, just hidden for clean interface
+
+### 1. Slack Integration (`/slack-settings`)
 - **Multi-Workspace Support**: Connect multiple Slack teams
 - **Channel Monitoring**: Capture ideas from dedicated channels
 - **Smart Parsing**: Automatically extract ideas from messages
@@ -183,16 +241,29 @@ VITE_ENV=production
 
 ### Core Tables
 - `content_ideas` - Content idea storage (updated with Slack fields)
-- `generated_content` - Generated LinkedIn posts
+- `generated_content` - Generated LinkedIn posts (ENHANCED with archive & scheduling fields)
 - `scheduled_posts` - Scheduled publications
-- `clients` - Client management
+- `clients` - Client management (multi-tenant support)
 - `users` - User accounts
 - `prompt_templates` - AI prompt templates (ENHANCED with new fields)
 - `prompt_usage_history` - Prompt usage tracking  
-- `prompt_test_results` - Test results and performance tracking (NEW)
-- `prompt_collections` - Organize prompts into themed collections (NEW)
-- `prompt_collection_items` - Junction table for collections (NEW)
+- `prompt_test_results` - Test results and performance tracking
+- `prompt_collections` - Organize prompts into themed collections
+- `prompt_collection_items` - Junction table for collections
 - `search_jobs` - Background search job queue
+- `notifications` - Client action notifications (NEW)
+- `client_activity_log` - Audit trail for client actions (NEW)
+- `admin_sessions` - Multi-user session management (NEW)
+
+### Enhanced generated_content Schema (NEW FIELDS)
+The `generated_content` table now includes:
+- `archived` - Boolean flag for archived content
+- `archived_at` - Timestamp when archived
+- `archived_reason` - Reason for archiving
+- `posted_at` - Timestamp when content was posted
+- `scheduled_for` - Scheduled publication datetime
+- `post_url` - URL of published post
+- `client_id` - Foreign key for client isolation (ENHANCED)
 
 ### Slack Tables (NEW)
 - `slack_workspaces` - Workspace configurations and credentials
@@ -342,22 +413,57 @@ npm run type-check
 3. Run `npm run dev`
 4. Access at http://localhost:5173
 
-## Current System Status (August 23, 2025) - MAJOR PROMPT SYSTEM OVERHAUL
+## Current System Status (August 23, 2025) - COMPLETE WORKFLOW REORGANIZATION
 
-### ✅ FULLY WORKING FEATURES
+### ✅ FULLY WORKING FEATURES - MAJOR UPDATE
+- **🎯 Three-Page Approval Workflow**: Complete separation of admin approval, client feedback, and scheduling
+- **👥 Client Isolation System**: Full multi-tenant support with client-specific views
+- **📋 Archive System**: Clean dashboard management with archiving capability
+- **🗓️ Content Calendar**: Schedule, track, and manage publication status
 - **🎯 Enhanced Content Generation**: Database-driven prompts with 1-10 dynamic variations
 - **🧪 Advanced Prompt Management**: Live testing, bulk operations, import/export, no hardcoded prompts
-- **✅ Approval Flow**: Complete admin → user approval process
+- **✅ Complete Approval Flow**: Admin → Client → Schedule → Publish workflow
 - **📊 Performance Tracking**: Test results, usage statistics, response times
 - **GPT-5 Web Search**: Real-time news search (2-5 min processing)
 - **Background Processing**: Jobs queue with email notifications
 - **Email Notifications**: Resend API integration
 - **Portal Integration**: Seamless switching between admin/user portals
-- **Slack Integration**: Multi-workspace support with automated sync (NEW)
+- **Slack Integration**: Multi-workspace support with automated sync
 
 ### 🔧 Recent Updates (August 14-23, 2025)
 
-#### 🎆 MAJOR SYSTEM OVERHAUL (August 23, 2025)
+#### 🚀 COMPLETE WORKFLOW REORGANIZATION (August 23, 2025)
+1. **📄 Three-Page Approval System**:
+   - Split single approval page into three focused pages
+   - Admin Approval: Only drafts and admin-rejected content
+   - Client Feedback: Handle all client responses (approved/rejected/edited)
+   - Content Calendar: Schedule and track publication status
+
+2. **👥 Client Isolation Implementation**:
+   - Complete separation of client content across all pages
+   - Client switcher affects all page views and counts
+   - Visual indicators showing active client context
+   - Navigation badges update based on selected client
+
+3. **📋 Archive System**:
+   - New database fields: `archived`, `archived_at`, `archived_reason`
+   - Clean dashboard by archiving completed content
+   - Smart filtering excludes archived content from active views
+   - Content preservation without deletion
+
+4. **🗓️ Content Calendar & Scheduling**:
+   - New database fields: `posted_at`, `scheduled_for`, `post_url`
+   - Three-view calendar: Ready/Scheduled/Posted
+   - Visual grid layout for content management
+   - Track complete publication lifecycle
+
+5. **🔧 Database Enhancements**:
+   - Archive and scheduling fields added to generated_content
+   - Notification system tables created
+   - Trigger fixes for error-free client actions
+   - Enhanced client isolation with proper foreign keys
+
+#### 🎆 PREVIOUS SYSTEM OVERHAUL (August 14-20, 2025)
 1. **❌ Removed ALL Hardcoded Prompts**:
    - Deleted `linkedin-prompts.ts` file (810 lines removed)
    - Made database prompts the ONLY source of truth
@@ -426,7 +532,35 @@ npm run type-check
    - **Simplified Generate Page**: Single input field, automatic URL detection
    - **Clean Visual Design**: Removed ugly accordions, added beautiful card-based layouts
 
-## Testing Checklist
+## Testing Checklist (Updated August 23, 2025)
+
+### Core Workflow ✅
+- [x] Content generation with client assignment
+- [x] Admin approval workflow (approve/reject/edit)
+- [x] Client portal actions (approve/reject/edit)
+- [x] Client feedback page displays responses
+- [x] Archive system removes content from active views
+- [x] Content calendar scheduling and tracking
+
+### Client Isolation ✅
+- [x] Client switcher affects all page views
+- [x] Navigation badges update per client
+- [x] Content filtered by active client
+- [x] No cross-client content bleeding
+
+### Database Integration ✅
+- [x] Archive fields working (archived, archived_at, archived_reason)
+- [x] Scheduling fields working (scheduled_for, posted_at, post_url)
+- [x] Client isolation via client_id foreign keys
+- [x] Notification system tables created
+
+### Portal Integration ✅
+- [x] Admin portal three-page workflow
+- [x] Client portal approval actions
+- [x] Seamless switching between portals
+- [x] Real-time data sync
+
+### Previous Features ✅
 - [x] GPT-5 API calls work (check OpenAI logs)
 - [x] Background search creates jobs
 - [x] Jobs process successfully

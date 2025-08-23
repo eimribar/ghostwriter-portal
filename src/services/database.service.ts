@@ -40,7 +40,8 @@ export interface Client {
 export const clientsService = {
   async getAll(): Promise<Client[]> {
     if (!isSupabaseConfigured()) {
-      return getMockClients();
+      console.warn('Supabase not configured - returning empty array');
+      return [];
     }
     
     const { data, error } = await supabase
@@ -50,7 +51,7 @@ export const clientsService = {
     
     if (error) {
       console.error('Error fetching clients:', error);
-      return getMockClients();
+      return [];
     }
     
     return data || [];
@@ -58,7 +59,8 @@ export const clientsService = {
 
   async getById(id: string): Promise<Client | null> {
     if (!isSupabaseConfigured()) {
-      return getMockClients().find(c => c.id === id) || null;
+      console.warn('Supabase not configured - returning null');
+      return null;
     }
     
     const { data, error } = await supabase
@@ -102,10 +104,7 @@ export const clientsService = {
 
   async update(id: string, updates: Partial<Client>): Promise<Client | null> {
     if (!isSupabaseConfigured()) {
-      const client = getMockClients().find(c => c.id === id);
-      if (client) {
-        return { ...client, ...updates, updated_at: new Date() };
-      }
+      console.warn('Supabase not configured - cannot update');
       return null;
     }
     
@@ -150,7 +149,7 @@ export const clientsService = {
 export const creatorsService = {
   async getAll(): Promise<Creator[]> {
     if (!isSupabaseConfigured()) {
-      return getMockCreators();
+      return [];
     }
     
     const { data, error } = await supabase
@@ -161,7 +160,7 @@ export const creatorsService = {
     
     if (error) {
       console.error('Error fetching creators:', error);
-      return getMockCreators();
+      return [];
     }
     
     return data || [];
@@ -169,7 +168,7 @@ export const creatorsService = {
 
   async getTopCreators(limit = 10): Promise<Creator[]> {
     if (!isSupabaseConfigured()) {
-      return getMockCreators().slice(0, limit);
+      return [];
     }
     
     const { data, error } = await supabase
@@ -181,7 +180,7 @@ export const creatorsService = {
     
     if (error) {
       console.error('Error fetching top creators:', error);
-      return getMockCreators().slice(0, limit);
+      return [];
     }
     
     return data || [];
@@ -189,9 +188,7 @@ export const creatorsService = {
 
   async searchByThemes(themes: string[]): Promise<Creator[]> {
     if (!isSupabaseConfigured()) {
-      return getMockCreators().filter(c => 
-        c.content_themes?.some(t => themes.includes(t))
-      );
+      return [];
     }
     
     const { data, error } = await supabase
@@ -220,7 +217,7 @@ export const contentPostsService = {
     themes?: string[];
   }): Promise<ContentPost[]> {
     if (!isSupabaseConfigured()) {
-      return getMockContentPosts();
+      return [];
     }
     
     let query = supabase
@@ -244,7 +241,7 @@ export const contentPostsService = {
     
     if (error) {
       console.error('Error fetching content posts:', error);
-      return getMockContentPosts();
+      return [];
     }
     
     return data || [];
@@ -252,9 +249,7 @@ export const contentPostsService = {
 
   async getTrending(limit = 20): Promise<ContentPost[]> {
     if (!isSupabaseConfigured()) {
-      return getMockContentPosts()
-        .sort((a, b) => b.reactions_count - a.reactions_count)
-        .slice(0, limit);
+      return [];
     }
     
     const { data, error } = await supabase
@@ -266,7 +261,7 @@ export const contentPostsService = {
     
     if (error) {
       console.error('Error fetching trending posts:', error);
-      return getMockContentPosts().slice(0, limit);
+      return [];
     }
     
     return data || [];
@@ -274,9 +269,7 @@ export const contentPostsService = {
 
   async searchContent(searchTerm: string): Promise<ContentPost[]> {
     if (!isSupabaseConfigured()) {
-      return getMockContentPosts().filter(p =>
-        p.content_text.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      return [];
     }
     
     const { data, error } = await supabase
@@ -307,7 +300,7 @@ export const contentPostsService = {
 export const generatedContentService = {
   async getAll(): Promise<GeneratedContent[]> {
     if (!isSupabaseConfigured()) {
-      return getMockGeneratedContent();
+      return [];
     }
     
     const { data, error } = await supabase
@@ -332,7 +325,7 @@ export const generatedContentService = {
 
   async getByIdea(ideaId: string): Promise<GeneratedContent[]> {
     if (!isSupabaseConfigured()) {
-      return getMockGeneratedContent().filter(c => c.idea_id === ideaId);
+      return [];
     }
     
     const { data, error } = await supabase
@@ -351,11 +344,7 @@ export const generatedContentService = {
 
   async getByClient(clientId: string, status?: GeneratedContent['status']): Promise<GeneratedContent[]> {
     if (!isSupabaseConfigured()) {
-      let content = getMockGeneratedContent().filter(c => c.client_id === clientId);
-      if (status) {
-        content = content.filter(c => c.status === status);
-      }
-      return content;
+      return [];
     }
     
     let query = supabase
@@ -523,7 +512,7 @@ export interface ScheduledPost {
 export const scheduledPostsService = {
   async getAll(): Promise<ScheduledPost[]> {
     if (!isSupabaseConfigured()) {
-      return getMockScheduledPosts();
+      return [];
     }
     
     const { data, error } = await supabase
@@ -541,7 +530,7 @@ export const scheduledPostsService = {
 
   async getByClient(clientId: string): Promise<ScheduledPost[]> {
     if (!isSupabaseConfigured()) {
-      return getMockScheduledPosts().filter(p => p.client_id === clientId);
+      return [];
     }
     
     const { data, error } = await supabase
@@ -560,9 +549,7 @@ export const scheduledPostsService = {
 
   async getUpcoming(limit = 10): Promise<ScheduledPost[]> {
     if (!isSupabaseConfigured()) {
-      return getMockScheduledPosts()
-        .filter(p => p.status === 'scheduled')
-        .slice(0, limit);
+      return [];
     }
     
     const { data, error } = await supabase
@@ -658,7 +645,7 @@ export interface ContentAnalytics {
 export const analyticsService = {
   async getByClient(clientId: string, dateRange?: { start: Date; end: Date }): Promise<ContentAnalytics[]> {
     if (!isSupabaseConfigured()) {
-      return getMockAnalytics().filter(a => a.client_id === clientId);
+      return [];
     }
     
     let query = supabase
@@ -767,15 +754,8 @@ export const contentIdeasService = {
     console.log('🔍 ContentIdeasService.getAll called with filters:', filters);
     
     if (!isSupabaseConfigured()) {
-      console.warn('⚠️ Supabase not configured, returning mock data');
-      return getMockContentIdeas().filter(idea => {
-        if (filters?.status && idea.status !== filters.status) return false;
-        if (filters?.priority && idea.priority !== filters.priority) return false;
-        if (filters?.category && idea.category !== filters.category) return false;
-        if (filters?.client_id && idea.client_id !== filters.client_id) return false;
-        if (filters?.source && idea.source !== filters.source) return false;
-        return true;
-      });
+      console.warn('⚠️ Supabase not configured, returning empty array');
+      return [];
     }
     
     console.log('📡 Fetching from Supabase content_ideas table...');
@@ -796,8 +776,8 @@ export const contentIdeasService = {
     if (error) {
       console.error('❌ Error fetching content ideas from Supabase:', error);
       console.error('Error details:', { code: error.code, message: error.message, details: error.details });
-      console.warn('⚠️ Falling back to mock data due to error');
-      return getMockContentIdeas();
+      console.error('⚠️ Database error - returning empty array');
+      return [];
     }
     
     console.log('✅ Successfully fetched ideas from database:', data?.length || 0, 'ideas');
@@ -806,7 +786,7 @@ export const contentIdeasService = {
 
   async getById(id: string): Promise<ContentIdeaDB | null> {
     if (!isSupabaseConfigured()) {
-      return getMockContentIdeas().find(i => i.id === id) || null;
+      return null;
     }
     
     const { data, error } = await supabase
@@ -834,8 +814,8 @@ export const contentIdeasService = {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      console.log('Mock: Created content idea:', newIdea);
-      return newIdea;
+      console.warn('Cannot create idea - Supabase not configured');
+      return null;
     }
     
     console.log('💾 Inserting into Supabase content_ideas table...');
@@ -893,12 +873,7 @@ export const contentIdeasService = {
 
   async update(id: string, updates: Partial<ContentIdeaDB>): Promise<ContentIdeaDB | null> {
     if (!isSupabaseConfigured()) {
-      const idea = getMockContentIdeas().find(i => i.id === id);
-      if (idea) {
-        Object.assign(idea, updates, { updated_at: new Date() });
-        console.log('Mock: Updated content idea:', idea);
-        return idea;
-      }
+      console.warn('Cannot update idea - Supabase not configured');
       return null;
     }
     
@@ -927,8 +902,8 @@ export const contentIdeasService = {
 
   async archive(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) {
-      console.log('Mock: Archived content idea:', id);
-      return true;
+      console.warn('Cannot archive idea - Supabase not configured');
+      return false;
     }
     
     const { error } = await supabase
@@ -946,12 +921,8 @@ export const contentIdeasService = {
 
   async search(query: string): Promise<ContentIdeaDB[]> {
     if (!isSupabaseConfigured()) {
-      const lowercaseQuery = query.toLowerCase();
-      return getMockContentIdeas().filter(idea =>
-        idea.title.toLowerCase().includes(lowercaseQuery) ||
-        idea.description?.toLowerCase().includes(lowercaseQuery) ||
-        idea.category?.toLowerCase().includes(lowercaseQuery)
-      );
+      console.warn('Cannot search ideas - Supabase not configured');
+      return [];
     }
     
     const { data, error } = await supabase
@@ -972,10 +943,7 @@ export const contentIdeasService = {
 
   async getTopIdeas(limit: number = 10): Promise<ContentIdeaDB[]> {
     if (!isSupabaseConfigured()) {
-      return getMockContentIdeas()
-        .filter(i => i.status === 'ready')
-        .sort((a, b) => (b.score || 0) - (a.score || 0))
-        .slice(0, limit);
+      return [];
     }
     
     const { data, error } = await supabase
@@ -996,8 +964,8 @@ export const contentIdeasService = {
 
   async markAsUsed(id: string, contentId: string): Promise<boolean> {
     if (!isSupabaseConfigured()) {
-      console.log('Mock: Marked idea as used:', id, 'for content:', contentId);
-      return true;
+      console.warn('Cannot mark idea as used - Supabase not configured');
+      return false;
     }
     
     const { error } = await supabase
@@ -1019,266 +987,8 @@ export const contentIdeasService = {
 };
 
 // =====================================================
-// MOCK DATA GENERATORS
+// All mock data has been removed - Using real database only
 // =====================================================
-
-function getMockClients(): Client[] {
-  return [
-    {
-      id: '1',
-      name: 'Amnon Cohen',
-      company: 'TechVentures Inc',
-      email: 'amnon@techventures.com',
-      linkedin_url: 'https://linkedin.com/in/amnoncohen',
-      status: 'active',
-      industry: 'Technology',
-      posting_frequency: '3 times per week',
-      content_preferences: {
-        tone: ['professional', 'insightful'],
-        topics: ['AI', 'startups', 'leadership'],
-        formats: ['insights', 'case studies'],
-        avoid: ['politics', 'controversial topics'],
-      },
-      created_at: new Date('2024-01-15'),
-      updated_at: new Date('2024-01-15'),
-    },
-    {
-      id: '2',
-      name: 'Maya Levine',
-      company: 'Growth Marketing Co',
-      email: 'maya@growthmarketing.co',
-      linkedin_url: 'https://linkedin.com/in/mayalevine',
-      status: 'active',
-      industry: 'Marketing',
-      posting_frequency: 'Daily',
-      content_preferences: {
-        tone: ['casual', 'educational'],
-        topics: ['growth', 'marketing', 'analytics'],
-        formats: ['tips', 'tutorials'],
-        avoid: ['sales pitches'],
-      },
-      created_at: new Date('2024-02-01'),
-      updated_at: new Date('2024-02-01'),
-    },
-  ];
-}
-
-function getMockCreators(): Creator[] {
-  return [
-    {
-      id: '1',
-      name: 'Alex Morgan',
-      linkedin_url: 'https://linkedin.com/in/alexmorgan',
-      profile_image: 'https://via.placeholder.com/150',
-      follower_count: 45000,
-      bio: 'Founder & CEO | AI Enthusiast | Building the future',
-      average_reactions: 1200,
-      content_themes: ['AI', 'startups', 'leadership'],
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-    {
-      id: '2',
-      name: 'Sam Wilson',
-      linkedin_url: 'https://linkedin.com/in/samwilson',
-      profile_image: 'https://via.placeholder.com/150',
-      follower_count: 32000,
-      bio: 'Growth Expert | Helping startups scale',
-      average_reactions: 890,
-      content_themes: ['growth', 'marketing', 'startups'],
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-  ];
-}
-
-function getMockContentPosts(): ContentPost[] {
-  return [
-    {
-      id: '1',
-      creator_id: '1',
-      original_url: 'https://linkedin.com/posts/1',
-      content_text: 'AI is transforming how we build products. Here are 5 key insights from building AI-first startups...',
-      post_type: 'text',
-      reactions_count: 1456,
-      comments_count: 89,
-      shares_count: 45,
-      hashtags: ['#AI', '#Startups', '#Innovation'],
-      posted_at: new Date('2024-01-10'),
-      scraped_at: new Date(),
-      quality_score: 0.92,
-      is_promotional: false,
-      content_themes: ['AI', 'startups'],
-    },
-    {
-      id: '2',
-      creator_id: '2',
-      original_url: 'https://linkedin.com/posts/2',
-      content_text: 'Growth isn\'t about hacks. It\'s about understanding your customers deeply...',
-      post_type: 'text',
-      reactions_count: 987,
-      comments_count: 56,
-      shares_count: 32,
-      hashtags: ['#Growth', '#Marketing', '#CustomerSuccess'],
-      posted_at: new Date('2024-01-12'),
-      scraped_at: new Date(),
-      quality_score: 0.85,
-      is_promotional: false,
-      content_themes: ['growth', 'marketing'],
-    },
-  ];
-}
-
-function getMockContentIdeas(): ContentIdeaDB[] {
-  return [
-    {
-      id: '1',
-      client_id: '1',
-      ghostwriter_id: 'user-1',
-      source: 'ai',
-      title: 'The Hidden Cost of Perfectionism in Startup Culture',
-      description: 'Explore how perfectionism can slow down innovation and what founders can do to balance quality with speed.',
-      hook: 'Perfectionism killed more startups than competition ever did.',
-      key_points: ['Ship fast and iterate', 'Perfect is the enemy of good', 'Customer feedback beats internal debates'],
-      target_audience: 'Startup founders and product managers',
-      content_format: 'thought-leadership',
-      category: 'Startup Culture',
-      status: 'ready',
-      priority: 'high',
-      score: 9.2,
-      predicted_engagement: 1500,
-      ai_model: 'gpt-5',
-      ai_reasoning_effort: 'medium',
-      linkedin_style: 'provocative',
-      hashtags: ['startup', 'productivity', 'leadership', 'innovation'],
-      used_count: 0,
-      created_at: new Date('2024-03-15'),
-      updated_at: new Date('2024-03-15'),
-    },
-    {
-      id: '2',
-      client_id: '2',
-      source: 'trending',
-      title: '5 Mental Models Every Product Manager Should Know',
-      description: 'Break down complex product decisions using proven mental frameworks.',
-      hook: 'The best PMs don\'t have more answers. They have better frameworks.',
-      key_points: ['First principles thinking', 'Inversion', 'Second-order effects', 'Opportunity cost', 'Probabilistic thinking'],
-      target_audience: 'Product managers and team leads',
-      content_format: 'listicle',
-      category: 'Product Management',
-      status: 'draft',
-      priority: 'medium',
-      score: 8.5,
-      predicted_engagement: 1200,
-      linkedin_style: 'educational',
-      hashtags: ['product', 'frameworks', 'decision-making', 'leadership'],
-      trend_reference: 'Mental models trending +45% this week',
-      trend_growth_rate: '+45%',
-      used_count: 0,
-      created_at: new Date('2024-03-14'),
-      updated_at: new Date('2024-03-14'),
-    },
-    {
-      id: '3',
-      source: 'manual',
-      title: 'Building in Public: Month 1 Learnings',
-      description: 'Share authentic journey of building a product with full transparency.',
-      hook: 'I made $0 this month. Here\'s why that\'s exactly what I wanted.',
-      key_points: ['Validation before monetization', 'Community feedback is gold', 'Document everything'],
-      target_audience: 'Entrepreneurs and indie makers',
-      content_format: 'case-study',
-      category: 'Build in Public',
-      status: 'in-progress',
-      priority: 'high',
-      score: 7.8,
-      linkedin_style: 'casual',
-      hashtags: ['buildinpublic', 'entrepreneur', 'startup', 'transparency'],
-      used_count: 0,
-      created_at: new Date('2024-03-13'),
-      updated_at: new Date('2024-03-13'),
-    },
-    {
-      id: '4',
-      source: 'competitor',
-      title: 'Why Your Best Employees Leave (And How to Keep Them)',
-      description: 'Data-driven insights into employee retention based on surveys of 1000+ tech professionals.',
-      hook: '87% of top performers leave for reasons you can actually fix.',
-      key_points: ['Growth opportunities matter more than salary', 'Autonomy drives engagement', 'Recognition systems are broken'],
-      target_audience: 'HR leaders and executives',
-      content_format: 'data-driven',
-      category: 'HR & Culture',
-      status: 'ready',
-      priority: 'high',
-      score: 8.9,
-      predicted_engagement: 2000,
-      competitor_reference: 'Inspired by Josh Bersin post',
-      linkedin_style: 'professional',
-      hashtags: ['hr', 'retention', 'leadership', 'culture', 'talentmanagement'],
-      used_count: 0,
-      created_at: new Date('2024-03-12'),
-      updated_at: new Date('2024-03-12'),
-    },
-  ];
-}
-
-function getMockGeneratedContent(): any[] {
-  return [
-    {
-      id: '1',
-      idea_id: '1',
-      client_id: '1',
-      ghostwriter_id: 'user-1',
-      variant_number: 1,
-      content_text: 'AI isn\'t coming. It\'s already here.\n\nLast week, I watched an AI assistant...',
-      hook: 'AI isn\'t coming. It\'s already here.',
-      hashtags: ['#AI', '#Innovation', '#FutureOfWork'],
-      llm_provider: 'openai',
-      status: 'pending',
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-  ];
-}
-
-function getMockScheduledPosts(): ScheduledPost[] {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  return [
-    {
-      id: '1',
-      content_id: '1',
-      client_id: '1',
-      scheduled_for: tomorrow,
-      platform: 'linkedin',
-      status: 'scheduled',
-      retry_count: 0,
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-  ];
-}
-
-function getMockAnalytics(): ContentAnalytics[] {
-  return [
-    {
-      id: '1',
-      scheduled_post_id: '1',
-      client_id: '1',
-      impressions: 12450,
-      reactions: 456,
-      comments: 34,
-      shares: 12,
-      clicks: 234,
-      engagement_rate: 4.2,
-      reach: 8900,
-      follower_change: 45,
-      recorded_at: new Date(),
-      data_source: 'estimated',
-      created_at: new Date(),
-    },
-  ];
-}
 
 // =====================================================
 // PROMPT TEMPLATES SERVICE

@@ -1,32 +1,45 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare } from 'lucide-react';
+import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare, MessageCircle, CalendarDays } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { generatedContentService } from '../services/database.service';
 import { ClientSwitcher } from './ClientSwitcher';
 import { useClientSwitch } from '../contexts/ClientSwitchContext';
+import NotificationBell from './NotificationBell';
 
 const Navigation = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { activeClient } = useClientSwitch();
-  const [pendingCount, setPendingCount] = useState(0);
+  const [counts, setCounts] = useState({ drafts: 0, feedback: 0 });
   
   useEffect(() => {
-    loadPendingCount();
+    loadCounts();
     // Refresh count every 30 seconds
-    const interval = setInterval(loadPendingCount, 30000);
+    const interval = setInterval(loadCounts, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeClient]);
   
-  const loadPendingCount = async () => {
+  const loadCounts = async () => {
     try {
       const allContent = await generatedContentService.getAll();
-      const pending = allContent.filter(c => c.status === 'draft');
-      setPendingCount(pending.length);
+      let drafts = allContent.filter(c => c.status === 'draft' || c.status === 'admin_rejected');
+      let feedback = allContent.filter(c => 
+        c.status === 'client_approved' || 
+        c.status === 'client_rejected' || 
+        c.status === 'client_edited'
+      );
+      
+      // Filter by active client if selected
+      if (activeClient) {
+        drafts = drafts.filter(c => c.client_id === activeClient.id);
+        feedback = feedback.filter(c => c.client_id === activeClient.id);
+      }
+      
+      setCounts({ drafts: drafts.length, feedback: feedback.length });
     } catch (error) {
-      console.error('Error loading pending count:', error);
+      console.error('Error loading counts:', error);
     }
   };
   
@@ -46,11 +59,16 @@ const Navigation = () => {
   return (
     <nav className="w-64 bg-white border-r border-zinc-200 h-screen p-4 flex flex-col">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-900">Ghostwriter Portal</h1>
-        <p className="text-sm text-zinc-500 mt-1">Content Engine Admin</p>
-        {user && (
-          <p className="text-xs text-zinc-400 mt-2">{user.email}</p>
-        )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900">Ghostwriter Portal</h1>
+            <p className="text-sm text-zinc-500 mt-1">Content Engine Admin</p>
+            {user && (
+              <p className="text-xs text-zinc-400 mt-2">{user.email}</p>
+            )}
+          </div>
+          <NotificationBell />
+        </div>
       </div>
 
       {/* Client Switcher */}
@@ -99,12 +117,27 @@ const Navigation = () => {
         
         <NavLink to="/approval" className={linkClass}>
           <CheckSquare className="h-4 w-4" />
-          <span className="flex-1">Approval Queue</span>
-          {pendingCount > 0 && (
+          <span className="flex-1">Admin Approval</span>
+          {counts.drafts > 0 && (
             <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-              {pendingCount}
+              {counts.drafts}
             </span>
           )}
+        </NavLink>
+        
+        <NavLink to="/client-feedback" className={linkClass}>
+          <MessageCircle className="h-4 w-4" />
+          <span className="flex-1">Client Feedback</span>
+          {counts.feedback > 0 && (
+            <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
+              {counts.feedback}
+            </span>
+          )}
+        </NavLink>
+        
+        <NavLink to="/calendar" className={linkClass}>
+          <CalendarDays className="h-4 w-4" />
+          <span className="flex-1">Content Calendar</span>
         </NavLink>
         
         <NavLink to="/prompts" className={linkClass}>

@@ -27,17 +27,10 @@ export const enhancedClientsService = {
       return [];
     }
     
+    // Simplified query without the join for now
     const { data, error } = await supabase
       .from('clients')
-      .select(`
-        *,
-        users!clients_user_id_fkey (
-          full_name,
-          email,
-          role
-        )
-      `)
-      .eq('portal_access', true)
+      .select('*')
       .order('name', { ascending: true });
     
     if (error) {
@@ -53,16 +46,10 @@ export const enhancedClientsService = {
       return null;
     }
     
+    // Simplified query without the join for now
     const { data, error } = await supabase
       .from('clients')
-      .select(`
-        *,
-        users!clients_user_id_fkey (
-          full_name,
-          email,
-          role
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
@@ -123,18 +110,13 @@ export const adminSessionService = {
       return null;
     }
     
+    // Always use default-admin for now
+    const effectiveAdminId = 'default-admin';
+    
     const { data, error } = await supabase
       .from('admin_sessions')
-      .select(`
-        *,
-        clients!admin_sessions_active_client_id_fkey (
-          id,
-          name,
-          company,
-          email
-        )
-      `)
-      .eq('admin_user_id', adminUserId)
+      .select('*')
+      .eq('admin_user_id', effectiveAdminId)
       .single();
     
     if (error && error.code !== 'PGRST116') {
@@ -150,8 +132,11 @@ export const adminSessionService = {
       return null;
     }
     
+    // Always use default-admin for now
+    const effectiveAdminId = 'default-admin';
+    
     const sessionData = {
-      admin_user_id: adminUserId,
+      admin_user_id: effectiveAdminId,
       active_client_id: clientId,
       switched_at: new Date().toISOString(),
       session_data: {
@@ -160,16 +145,51 @@ export const adminSessionService = {
       }
     };
     
-    const { data, error } = await supabase
+    // First try to update existing session
+    const { data: existingSession } = await supabase
       .from('admin_sessions')
-      .upsert(sessionData, { 
-        onConflict: 'admin_user_id' 
-      })
-      .select()
+      .select('*')
+      .eq('admin_user_id', effectiveAdminId)
       .single();
+
+    let data, error;
+    
+    if (existingSession) {
+      // Update existing session
+      const result = await supabase
+        .from('admin_sessions')
+        .update({
+          active_client_id: clientId,
+          switched_at: new Date().toISOString(),
+          session_data: sessionData.session_data,
+          updated_at: new Date().toISOString()
+        })
+        .eq('admin_user_id', effectiveAdminId)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new session
+      const result = await supabase
+        .from('admin_sessions')
+        .insert(sessionData)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
     
     if (error) {
       console.error('Error switching to client:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return null;
     }
     
@@ -185,13 +205,16 @@ export const adminSessionService = {
       return false;
     }
     
+    // Always use default-admin for now
+    const effectiveAdminId = 'default-admin';
+    
     const { error } = await supabase
       .from('admin_sessions')
       .update({ 
         active_client_id: null,
         switched_at: new Date().toISOString()
       })
-      .eq('admin_user_id', adminUserId);
+      .eq('admin_user_id', effectiveAdminId);
     
     if (error) {
       console.error('Error clearing active client:', error);

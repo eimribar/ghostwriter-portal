@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe, Plus } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe, Plus, Building } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations, generateWithPrompt } from '../lib/llm-service';
 import { generatedContentService, clientsService, promptTemplatesService, type Client, type PromptTemplate } from '../services/database.service';
+import { useClientSwitch } from '../contexts/ClientSwitchContext';
 // import { useAuth } from '../contexts/AuthContext'; // Not using auth for now
 
 interface GeneratedVariation {
@@ -16,6 +17,7 @@ interface GeneratedVariation {
 
 const Generate = () => {
   // const { user } = useAuth(); // Commented out - not using user for now
+  const { activeClient } = useClientSwitch(); // Get active client from context
   const [contentIdea, setContentIdea] = useState('');
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -168,7 +170,7 @@ const Generate = () => {
       const savePromises = variationsToSave.map(async (variation, index) => {
         const dataToSave = {
           idea_id: undefined,
-          client_id: undefined,
+          client_id: activeClient?.id || undefined, // Use active client from context
           ghostwriter_id: undefined,
           user_id: undefined,
           variant_number: index + 1,
@@ -184,6 +186,7 @@ const Generate = () => {
         };
         
         console.log('Attempting to save:', dataToSave);
+        console.log('Active client:', activeClient?.name || 'None');
         return generatedContentService.create(dataToSave);
       });
       
@@ -223,10 +226,24 @@ const Generate = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-zinc-900">Generate Content</h1>
-        <p className="text-zinc-600 mt-2">
-          Enter your content idea and generate 4 unique LinkedIn post variations
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-zinc-900">Generate Content</h1>
+            <p className="text-zinc-600 mt-2">
+              Enter your content idea and generate unique LinkedIn post variations
+            </p>
+          </div>
+          {activeClient && (
+            <div className="bg-zinc-100 rounded-lg px-4 py-2 flex items-center gap-2">
+              <Building className="w-4 h-4 text-zinc-600" />
+              <div>
+                <p className="text-xs text-zinc-500">Generating for</p>
+                <p className="text-sm font-medium text-zinc-900">{activeClient.name}</p>
+                <p className="text-xs text-zinc-600">{activeClient.company}</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
