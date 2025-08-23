@@ -224,7 +224,7 @@ const Clients = () => {
       
       if (result.success) {
         // Get the invitation details to show the link
-        const { data: invitation, error } = await supabase
+        const { data: invitation } = await supabase
           .from('client_invitations')
           .select('token')
           .eq('client_id', client.id)
