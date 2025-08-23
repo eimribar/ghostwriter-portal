@@ -4,7 +4,7 @@
 // =====================================================
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Mail, Phone, Globe, Linkedin, CheckCircle, Clock, AlertCircle, Trash2, UserPlus } from 'lucide-react';
+import { Users, Plus, Edit2, Mail, Phone, Linkedin, CheckCircle, Clock, AlertCircle, Trash2, UserPlus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -69,14 +69,14 @@ const Clients = () => {
       if (clientsError) throw clientsError;
 
       if (clientsData) {
-        setClients(clientsData.map(client => ({
+        setClients(clientsData.map((client: any) => ({
           ...client,
           created_at: new Date(client.created_at),
           updated_at: new Date(client.updated_at),
         })));
 
         // Load stats for each client
-        await loadClientStats(clientsData.map(c => c.id));
+        await loadClientStats(clientsData.map((c: any) => c.id));
       }
     } catch (error) {
       console.error('Error loading clients:', error);

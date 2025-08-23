@@ -807,13 +807,8 @@ export const contentIdeasService = {
     console.log('📝 Creating content idea:', idea);
     
     if (!isSupabaseConfigured()) {
-      const newIdea: ContentIdeaDB = {
-        ...idea,
-        id: crypto.randomUUID(),
-        used_count: 0,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+      // Mock data mode - just log and return null
+      console.log('Mock mode: would create idea:', idea);
       console.warn('Cannot create idea - Supabase not configured');
       return null;
     }

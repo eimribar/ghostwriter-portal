@@ -110,6 +110,7 @@ const ClientFeedback = () => {
     // This will be expanded when we build the calendar page
     toast.success('Redirecting to calendar...');
     // Navigate to calendar with this content
+    console.log('Scheduling item:', item.id);
   };
 
   const handleEditAndResend = async (item: GeneratedContent) => {

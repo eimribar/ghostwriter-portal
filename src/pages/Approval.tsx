@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Edit2, Clock, Filter, Save, X, UserPlus, Building, ChevronRight } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { CheckCircle, XCircle, Edit2, Clock, Save, X, UserPlus, Building, ChevronRight } from 'lucide-react';
 import { generatedContentService, type GeneratedContent, clientsService } from '../services/database.service';
 import ClientAssignmentModal from '../components/ClientAssignmentModal';
 import toast from 'react-hot-toast';

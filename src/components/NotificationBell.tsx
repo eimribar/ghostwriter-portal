@@ -45,7 +45,7 @@ const NotificationBell: React.FC = () => {
         console.error('Error loading notifications:', error);
       } else {
         setNotifications(data || []);
-        const unread = data?.filter(n => !n.is_read).length || 0;
+        const unread = data?.filter((n: Notification) => !n.is_read).length || 0;
         setUnreadCount(unread);
       }
     } catch (err) {
@@ -65,7 +65,7 @@ const NotificationBell: React.FC = () => {
           schema: 'public',
           table: 'notifications'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('New notification:', payload);
           const newNotification = payload.new as Notification;
           

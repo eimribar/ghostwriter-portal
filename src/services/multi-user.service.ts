@@ -111,7 +111,7 @@ export const adminSessionService = {
     }
     
     // Always use default-admin for now
-    const effectiveAdminId = 'default-admin';
+    const effectiveAdminId = adminUserId || 'default-admin';
     
     const { data, error } = await supabase
       .from('admin_sessions')
@@ -133,7 +133,7 @@ export const adminSessionService = {
     }
     
     // Always use default-admin for now
-    const effectiveAdminId = 'default-admin';
+    const effectiveAdminId = adminUserId || 'default-admin';
     
     const sessionData = {
       admin_user_id: effectiveAdminId,
@@ -206,7 +206,7 @@ export const adminSessionService = {
     }
     
     // Always use default-admin for now
-    const effectiveAdminId = 'default-admin';
+    const effectiveAdminId = adminUserId || 'default-admin';
     
     const { error } = await supabase
       .from('admin_sessions')

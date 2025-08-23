@@ -86,10 +86,17 @@ export interface GeneratedContent {
   llm_provider: 'google' | 'anthropic' | 'openai';
   llm_model?: string;
   generation_prompt?: string;
-  status: 'draft' | 'admin_approved' | 'admin_rejected' | 'client_approved' | 'client_rejected' | 'scheduled' | 'published';
+  status: 'draft' | 'admin_approved' | 'admin_rejected' | 'client_approved' | 'client_rejected' | 'client_edited' | 'scheduled' | 'published';
   revision_notes?: string;
   approved_at?: Date;
   approved_by?: string;
   created_at: Date;
   updated_at: Date;
+  // New archive and scheduling fields
+  archived?: boolean;
+  archived_at?: Date;
+  archived_reason?: string;
+  posted_at?: Date;
+  scheduled_for?: Date;
+  post_url?: string;
 }
