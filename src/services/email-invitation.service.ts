@@ -180,12 +180,8 @@ ${data.companyName}`;
             error: errorData
           });
           
-          // Return error (not success!) so user knows email failed
-          return { 
-            success: false, 
-            invitationId: invitation.invitation_id,
-            error: `Email failed: ${errorData.error || errorData.details || response.statusText}`
-          };
+          // Return the actual error
+          throw new Error(`Email failed: ${errorData.error || errorData.details || response.statusText}`);
         }
 
         const result = await response.json();

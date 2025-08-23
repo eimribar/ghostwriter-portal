@@ -69,6 +69,14 @@ export default async function handler(req, res) {
       console.log('HTML preview (first 500 chars):', html.substring(0, 500));
     }
 
+    // Helper function to sanitize tag values (only ASCII letters, numbers, underscores, dashes)
+    const sanitizeTagValue = (value) => {
+      if (!value) return 'unknown';
+      return String(value)
+        .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace invalid chars with underscore
+        .substring(0, 190); // Resend has a 190 char limit for tag values
+    };
+
     // Send email using Resend
     console.log('About to call Resend API...');
     
@@ -81,8 +89,8 @@ export default async function handler(req, res) {
         text: text || stripHtml(html), // Fallback to stripped HTML if no text provided
         tags: [
           { name: 'type', value: 'invitation' },
-          { name: 'client', value: clientName || 'unknown' },
-          { name: 'invitation_id', value: invitationId || 'unknown' },
+          { name: 'client', value: sanitizeTagValue(clientName) },
+          { name: 'invitation_id', value: sanitizeTagValue(invitationId) },
           { name: 'is_resend', value: String(isResend) }
         ]
       });
