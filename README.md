@@ -62,10 +62,12 @@ See [VERCEL_ENV_VARS.md](./VERCEL_ENV_VARS.md) for complete setup.
 ## 🎨 Features
 
 ### Content Generation (/generate)
-- Google Gemini 2.5 Pro
-- 4 LinkedIn templates
-- 1M+ token capacity
-- Google Grounding enabled
+- 🎯 **Database-Driven Prompts** (no hardcoded templates)
+- 🎛️ **Dynamic Variations** (1-10 variations)
+- 🎨 **Multiple Strategies** (same prompt, different prompts, mixed)
+- ⚡ **Multi-Provider Support** (Google Gemini 2.5 Pro, OpenAI, Anthropic)
+- 🌐 **Google Grounding** enabled by default
+- 🔗 **URL Auto-extraction** and analysis
 
 ### Content Ideation (/ideation)
 - GPT-5 web search
@@ -78,10 +80,17 @@ See [VERCEL_ENV_VARS.md](./VERCEL_ENV_VARS.md) for complete setup.
 - In-line editing
 - Status filtering
 
-### Prompt Management (/prompts)
-- Full CRUD operations
-- Version history
-- Usage statistics
+### Prompt Management (/prompts) - MAJOR UPGRADE
+- 🧪 **Live Testing** - Test prompts with real API calls before using
+- 📦 **Bulk Operations** - Select, activate, duplicate, delete multiple prompts
+- 📥📤 **Import/Export** - Backup and share prompt collections
+- 🎯 **Full CRUD** operations with instant UI updates
+- 📊 **Performance Tracking** - Response times, success rates, usage stats
+- 📚 **Collections System** - Organize prompts by theme/category
+- ⭐ **Favorites** - Mark frequently used prompts
+- 🔍 **Advanced Filtering** - Search by name, description, tags
+- 🎨 **Tone & Format Presets** - Professional, casual, technical styles
+- ✅ **Zero Hardcoded Dependencies** - Complete database control
 
 ## 🏗️ Architecture
 

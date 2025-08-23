@@ -37,12 +37,11 @@ ghostwriter-portal/
 │   ├── lib/
 │   │   ├── supabase.ts        # Supabase client config
 │   │   ├── api-config.ts      # API configurations
-│   │   ├── llm-service.ts     # Gemini API integration
-│   │   └── linkedin-prompts.ts # LinkedIn templates (4 styles)
+│   │   └── llm-service.ts     # Database-driven AI service (NO hardcoded prompts)
 │   ├── pages/
 │   │   ├── Generate.tsx       # Content generation (no client required)
 │   │   ├── Approval.tsx       # Content approval queue
-│   │   ├── Prompts.tsx        # Prompt management system
+│   │   ├── Prompts.tsx        # Complete prompt management system with testing & bulk ops
 │   │   ├── Ideation.tsx       # Content ideation with GPT-5 web search
 │   │   ├── Schedule.tsx       # Post scheduling
 │   │   ├── Clients.tsx        # Client management
@@ -119,17 +118,22 @@ VITE_ENV=production
 - **Auto-Approval**: Configure trusted channels
 - **See SLACK_INTEGRATION.md for complete setup guide**
 
-### 2. Content Generation (`/generate`)
-- Uses Google Gemini 2.5 Pro API exclusively
-- Max tokens: 1,048,576 (over 1 million tokens)
-- Google Grounding: ENABLED by default for real-time information
-- 4 LinkedIn prompt templates (RevOps, SaaStr, Sales Excellence, Data/Listicle)
-- Temperature: 1.5 for creativity
-- Auto-saves to database with status: 'draft'
-- NO CLIENT SELECTION REQUIRED
-- Supports hashtag extraction and read time estimation
+### 2. Enhanced Content Generation (`/generate`) - MAJOR UPGRADE ✨
+- **🎯 Database-Driven Prompts**: Uses ONLY prompts from database (no hardcoded templates)
+- **🎛️ Dynamic Variations**: Choose 1-10 variations instead of fixed 4
+- **🎨 Variation Strategies**: 
+  - Same prompt with temperature variations
+  - Different prompts from Content Generation category  
+  - Mixed category prompts (coming soon)
+- **🔍 Prompt Preview**: Show/hide prompt details directly in Generate page
+- **⚙️ Multi-Provider Support**: Google Gemini 2.5 Pro, OpenAI, Anthropic
+- **🌐 Google Grounding**: ENABLED by default for real-time information
+- **💾 Auto-saves to database** with status: 'draft'
+- **📈 Enhanced Settings**: Custom temperature, max tokens per prompt
+- **🔗 URL Auto-extraction**: Automatically detects and analyzes URLs in content
+- **⚡ Fail-Fast Approach**: Clear errors when no prompts exist (guides user to create prompts)
 
-### 2. Approval Queue (`/approval`)
+### 3. Approval Queue (`/approval`)
 - Lists all draft content (status: 'draft')
 - Approve → Updates status to 'admin_approved'
 - Reject → Updates status to 'admin_rejected' with reason
@@ -137,7 +141,7 @@ VITE_ENV=production
 - Filter by status: all/draft/admin_approved/admin_rejected
 - Content flows: draft → admin_approved → client_approved → scheduled/published
 
-### 3. Content Ideation (`/ideation`) - GPT-5 Powered ✅ WORKING
+### 4. Content Ideation (`/ideation`) - GPT-5 Powered ✅ WORKING
 - **News & Trends**: Real-time web search for trending topics
   - Uses GPT-5 Responses API (`/v1/responses` endpoint)
   - Enables `tools: [{ type: "web_search" }]` for real web search
@@ -152,15 +156,21 @@ VITE_ENV=production
   - Active jobs indicator shows running searches
 - **NO MOCK DATA**: All searches are real, no fallback to mock
 
-### 4. Prompt Management (`/prompts`)
-- Full CRUD operations for AI prompts
-- Categories: Content Generation, Content Ideation, Content Editing
-- Search by name, description, or tags
-- Duplicate prompts for variations
-- Version history tracking
-- Usage statistics and success rates
+### 5. Advanced Prompt Management (`/prompts`) - COMPLETELY OVERHAULED ✨
+- **🚫 NO MORE HARDCODED PROMPTS**: All prompts are database-driven
+- **🧪 Live Prompt Testing**: Test any prompt with real API calls before using
+- **⚡ Bulk Operations**: Select/activate/duplicate/delete multiple prompts at once
+- **📥📤 Import/Export**: Backup and share prompts as JSON files
+- **🎛️ Dynamic Variations**: Generate 1-10 content variations with different strategies
+- **🏷️ Enhanced Filtering**: Search by name, description, tags, or category
+- **🔧 Full CRUD Operations**: Create, read, update, delete prompts from UI
+- **📊 Performance Tracking**: Usage statistics, success rates, and response times
+- **⭐ Favorites System**: Mark frequently used prompts for quick access
+- **🎨 Visual Management**: Modern card-based interface with bulk selection
+- **Categories**: Content Generation, Content Ideation, Content Editing
+- **Multi-Provider Support**: Google Gemini, OpenAI, Anthropic
 
-### 5. Portal Integration
+### 6. Portal Integration
 - **Portal Switcher**: Bottom-right button to navigate to User Portal
 - **Shared Database**: Both portals use same Supabase instance
 - **URLs**:
@@ -177,8 +187,11 @@ VITE_ENV=production
 - `scheduled_posts` - Scheduled publications
 - `clients` - Client management
 - `users` - User accounts
-- `prompt_templates` - AI prompt templates
-- `prompt_usage_history` - Prompt usage tracking
+- `prompt_templates` - AI prompt templates (ENHANCED with new fields)
+- `prompt_usage_history` - Prompt usage tracking  
+- `prompt_test_results` - Test results and performance tracking (NEW)
+- `prompt_collections` - Organize prompts into themed collections (NEW)
+- `prompt_collection_items` - Junction table for collections (NEW)
 - `search_jobs` - Background search job queue
 
 ### Slack Tables (NEW)
@@ -205,6 +218,34 @@ CREATE TABLE search_jobs (
   completed_at TIMESTAMPTZ
 );
 ```
+
+### Enhanced Prompt Templates Schema (NEW FIELDS)
+The `prompt_templates` table now includes:
+- `output_format` - Expected output format (paragraph, list, bullets, json, markdown)
+- `tone_preset` - Tone preset (professional, casual, technical, inspirational, friendly) 
+- `length_preset` - Length preset (short, medium, long, custom)
+- `is_favorite` - Mark frequently used prompts
+- `last_tested_at` - When prompt was last tested
+- `average_response_time` - Performance tracking in milliseconds
+
+### prompt_test_results Table (NEW)
+```sql
+CREATE TABLE prompt_test_results (
+  id UUID PRIMARY KEY,
+  prompt_template_id UUID REFERENCES prompt_templates(id),
+  test_input TEXT NOT NULL,
+  test_output TEXT NOT NULL,
+  response_time_ms INTEGER,
+  quality_rating INTEGER CHECK (quality_rating >= 1 AND quality_rating <= 5),
+  tested_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Prompt Collections System (NEW)
+- `prompt_collections` - Organize prompts into themed groups
+- `prompt_collection_items` - Junction table linking prompts to collections
+- Pre-loaded "LinkedIn Content Templates" collection with 4 LinkedIn prompts
 
 ## GPT-5 Responses API Integration
 
@@ -301,19 +342,57 @@ npm run type-check
 3. Run `npm run dev`
 4. Access at http://localhost:5173
 
-## Current System Status (August 18, 2025)
+## Current System Status (August 23, 2025) - MAJOR PROMPT SYSTEM OVERHAUL
 
 ### ✅ FULLY WORKING FEATURES
-- **Content Generation**: Gemini 2.5 Pro with 1M+ tokens
-- **Approval Flow**: Complete admin → user approval process
-- **Prompt Management**: Full CRUD with 4 LinkedIn templates
+- **🎯 Enhanced Content Generation**: Database-driven prompts with 1-10 dynamic variations
+- **🧪 Advanced Prompt Management**: Live testing, bulk operations, import/export, no hardcoded prompts
+- **✅ Approval Flow**: Complete admin → user approval process
+- **📊 Performance Tracking**: Test results, usage statistics, response times
 - **GPT-5 Web Search**: Real-time news search (2-5 min processing)
 - **Background Processing**: Jobs queue with email notifications
 - **Email Notifications**: Resend API integration
 - **Portal Integration**: Seamless switching between admin/user portals
 - **Slack Integration**: Multi-workspace support with automated sync (NEW)
 
-### 🔧 Recent Updates (August 14-18, 2025)
+### 🔧 Recent Updates (August 14-23, 2025)
+
+#### 🎆 MAJOR SYSTEM OVERHAUL (August 23, 2025)
+1. **❌ Removed ALL Hardcoded Prompts**:
+   - Deleted `linkedin-prompts.ts` file (810 lines removed)
+   - Made database prompts the ONLY source of truth
+   - No more fallback to hardcoded templates
+
+2. **🧪 Live Prompt Testing System**:
+   - Test any prompt with real API calls
+   - Real-time response preview
+   - Performance tracking (response time, quality rating)
+   - Copy outputs or save as new prompts
+
+3. **⚡ Bulk Operations for Prompts**:
+   - Multi-select prompts with checkboxes
+   - Bulk activate/deactivate/duplicate/delete
+   - Visual feedback for selected prompts
+   - "Select All" and "Clear Selection" options
+
+4. **📥📤 Import/Export Functionality**:
+   - Export prompts as JSON for backup
+   - Import prompts from JSON files
+   - Share prompt libraries between instances
+
+5. **🎛️ Enhanced Generate Page**:
+   - Choose 1-10 variations (was fixed at 4)
+   - Multiple variation strategies
+   - Dynamic prompt selection from database
+   - Better error handling with user guidance
+
+6. **📋 Database Enhancements**:
+   - New fields: `output_format`, `tone_preset`, `length_preset`, `is_favorite`
+   - `prompt_test_results` table for tracking test performance
+   - `prompt_collections` system for organizing prompts
+   - Pre-loaded 4 LinkedIn templates from hardcoded data
+
+#### Previous Updates
 1. **Fixed GPT-5 API Integration**:
    - Corrected environment variables (non-VITE for serverless)
    - Fixed parameter name: `max_output_tokens`
