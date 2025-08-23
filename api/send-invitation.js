@@ -60,29 +60,51 @@ export default async function handler(req, res) {
     console.log('Invitation ID:', invitationId);
     console.log('API Key exists:', !!resendKey);
     console.log('API Key starts with:', resendKey?.substring(0, 10));
+    console.log('HTML length:', html?.length);
+    console.log('Text length:', text?.length);
+    console.log('Subject:', subject);
+    
+    // Log first 500 chars of HTML to see what's being sent
+    if (html) {
+      console.log('HTML preview (first 500 chars):', html.substring(0, 500));
+    }
 
     // Send email using Resend
-    const email = await resend.emails.send({
-      from: 'Ghostwriter Portal <onboarding@resend.dev>',
-      to: [to],
-      subject,
-      html,
-      text: text || stripHtml(html), // Fallback to stripped HTML if no text provided
-      tags: [
-        { name: 'type', value: 'invitation' },
-        { name: 'client', value: clientName || 'unknown' },
-        { name: 'invitation_id', value: invitationId || 'unknown' },
-        { name: 'is_resend', value: String(isResend) }
-      ]
-    });
+    console.log('About to call Resend API...');
+    
+    try {
+      const email = await resend.emails.send({
+        from: 'Ghostwriter Portal <onboarding@resend.dev>',
+        to: [to],
+        subject,
+        html,
+        text: text || stripHtml(html), // Fallback to stripped HTML if no text provided
+        tags: [
+          { name: 'type', value: 'invitation' },
+          { name: 'client', value: clientName || 'unknown' },
+          { name: 'invitation_id', value: invitationId || 'unknown' },
+          { name: 'is_resend', value: String(isResend) }
+        ]
+      });
 
-    console.log('✅ Invitation email sent successfully:', email);
-
-    return res.status(200).json({ 
-      success: true, 
-      messageId: email.id,
-      message: `Invitation email sent to ${to}`
-    });
+      console.log('✅ Resend API response:', JSON.stringify(email));
+      
+      if (email.error) {
+        console.error('❌ Resend returned error:', email.error);
+        throw new Error(email.error.message || 'Resend API error');
+      }
+      
+      console.log('✅ Invitation email sent successfully:', email);
+      
+      return res.status(200).json({ 
+        success: true, 
+        messageId: email.id,
+        message: `Invitation email sent to ${to}`
+      });
+    } catch (resendError) {
+      console.error('❌ Resend API call failed:', resendError);
+      throw resendError;
+    }
 
   } catch (error) {
     console.error('❌ Error sending invitation email:', error);
