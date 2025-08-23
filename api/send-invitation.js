@@ -52,7 +52,7 @@ export default async function handler(req, res) {
 
     // Send email using Resend
     const email = await resend.emails.send({
-      from: 'LinkedIn Content Portal <noreply@updates.yess.ai>',
+      from: 'Ghostwriter Portal <onboarding@resend.dev>',
       to: [to],
       subject,
       html,

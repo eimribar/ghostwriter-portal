@@ -4,7 +4,7 @@
 // =====================================================
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Mail, Phone, Linkedin, CheckCircle, Clock, AlertCircle, Trash2, UserPlus, LogIn } from 'lucide-react';
+import { Users, Plus, Edit2, Mail, Phone, Linkedin, CheckCircle, Clock, AlertCircle, Trash2, UserPlus, LogIn, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { adminAuthService } from '../services/admin-auth.service';
@@ -223,7 +223,58 @@ const Clients = () => {
       const result = await clientInvitationService.sendInvitation(client.id);
       
       if (result.success) {
-        toast.success('SSO invitation sent successfully!', { id: 'invite' });
+        // Get the invitation details to show the link
+        const { data: invitation, error } = await supabase
+          .from('client_invitations')
+          .select('token')
+          .eq('client_id', client.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (invitation?.token) {
+          const invitationUrl = `https://unified-linkedin-project.vercel.app/auth?invitation=${invitation.token}`;
+          
+          // Show success with link and copy button
+          toast.custom((t) => (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 max-w-md">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-zinc-100 font-medium">Invitation created successfully!</p>
+                  <p className="text-zinc-400 text-sm mt-1">
+                    Email should arrive shortly. You can also share this link directly:
+                  </p>
+                  <div className="mt-2 p-2 bg-zinc-800 rounded border border-zinc-700">
+                    <p className="text-xs text-zinc-500 font-mono break-all">{invitationUrl}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(invitationUrl);
+                      toast.success('Link copied to clipboard!', { duration: 2000 });
+                    }}
+                    className="mt-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Copy Invitation Link
+                  </button>
+                </div>
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="text-zinc-500 hover:text-zinc-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ), { 
+            id: 'invite',
+            duration: 30000 // Show for 30 seconds
+          });
+        } else {
+          toast.success('SSO invitation sent successfully! Check email for the link.', { id: 'invite' });
+        }
+        
         await loadClients();
       } else {
         throw new Error(result.error || 'Failed to send invitation');
