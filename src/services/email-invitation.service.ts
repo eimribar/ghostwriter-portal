@@ -321,9 +321,16 @@ LinkedIn Content Management Team
           p_admin_id: null // Will be set by the function if needed
         });
 
-      if (inviteError || !invitationData || invitationData.length === 0) {
-        console.error('Failed to create invitation:', inviteError);
-        return { success: false, error: 'Failed to create invitation record' };
+      if (inviteError) {
+        console.error('Database error creating invitation:', inviteError);
+        // Extract the actual error message from the database
+        const errorMessage = inviteError.message || inviteError.details || 'Failed to create invitation record';
+        return { success: false, error: `Database error: ${errorMessage}` };
+      }
+
+      if (!invitationData || invitationData.length === 0) {
+        console.error('No invitation data returned from database');
+        return { success: false, error: 'No invitation data returned from database function' };
       }
 
       const invitation = invitationData[0];
