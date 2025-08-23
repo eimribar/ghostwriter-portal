@@ -191,7 +191,7 @@ const Clients = () => {
       const result = await adminAuthService.createImpersonationToken(
         client.id,
         'Admin debugging session via Clients page',
-        null,
+        undefined,
         navigator.userAgent
       );
 

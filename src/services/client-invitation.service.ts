@@ -160,7 +160,7 @@ export const clientInvitationService = {
         return [];
       }
 
-      return data.map(invitation => ({
+      return data.map((invitation: any) => ({
         ...invitation,
         client_name: invitation.clients.name,
         client_email: invitation.clients.email

@@ -4,14 +4,14 @@
 // Production-ready impersonation system
 // =====================================================
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Shield, Users, LogIn, UserCheck, Clock, AlertTriangle, 
-  RefreshCw, Send, Key, Eye, History, ExternalLink,
-  CheckCircle, XCircle, Pause, Play, Mail, Copy
+  RefreshCw, Send, Key, Eye, History,
+  CheckCircle, XCircle, Pause, Play
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { adminAuthService, ClientAuthOverview } from '../services/admin-auth.service';
+import { adminAuthService, type ClientAuthOverview } from '../services/admin-auth.service';
 import { clientInvitationService } from '../services/client-invitation.service';
 import toast from 'react-hot-toast';
 
@@ -93,7 +93,7 @@ const AdminClientAuth = () => {
       const result = await adminAuthService.createImpersonationToken(
         client.client_id,
         'Admin debugging session via AdminClientAuth page',
-        null,
+        undefined,
         navigator.userAgent
       );
 
