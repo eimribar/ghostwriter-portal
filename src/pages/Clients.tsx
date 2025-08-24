@@ -517,6 +517,16 @@ const Clients = () => {
                     </button>
                   )}
                   
+                  {/* View Client Portal - for admin to view any client's portal */}
+                  <button
+                    onClick={() => window.open(`https://unified-linkedin-project.vercel.app/client-approve?client_id=${client.id}`, '_blank')}
+                    className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    title="View client's portal"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    View Portal
+                  </button>
+                  
                   {/* Send Invitation button - only show if client hasn't completed SSO setup */}
                   {client.portal_access && !client.user_id && (
                     <button
