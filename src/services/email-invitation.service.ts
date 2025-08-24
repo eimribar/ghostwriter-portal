@@ -96,7 +96,7 @@ ${data.companyName}`;
     clientId: string,
     customMessage?: string,
     adminName?: string
-  ): Promise<{ success: boolean; invitationId?: string; error?: string }> {
+  ): Promise<{ success: boolean; invitationId?: string; error?: string; emailFailed?: boolean; invitationToken?: string }> {
     try {
       console.log('📧 Creating invitation for client:', clientId);
       

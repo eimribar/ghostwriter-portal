@@ -36,11 +36,34 @@ export default async function handler(req, res) {
       return res.status(200).json({ challenge: req.body.challenge });
     }
 
-    // TODO: Implement signature verification
-    // const isValid = verifySlackSignature(signature, timestamp, rawBody, signingSecret);
-    // if (!isValid) {
-    //   return res.status(401).json({ error: 'Invalid signature' });
-    // }
+    // Verify Slack signature for security
+    const crypto = require('crypto');
+    const verifySlackSignature = (signature, timestamp, body, secret) => {
+      const time = Math.floor(new Date().getTime()/1000);
+      if (Math.abs(time - timestamp) > 300) {
+        return false; // Request timestamp is too old
+      }
+      
+      const sigBasestring = 'v0:' + timestamp + ':' + body;
+      const mySignature = 'v0=' + crypto
+        .createHmac('sha256', secret)
+        .update(sigBasestring, 'utf8')
+        .digest('hex');
+      
+      return crypto.timingSafeEqual(
+        Buffer.from(mySignature, 'utf8'),
+        Buffer.from(signature, 'utf8')
+      );
+    };
+    
+    // Skip verification for URL verification challenge
+    if (req.body.type !== 'url_verification') {
+      const isValid = verifySlackSignature(signature, timestamp, rawBody, signingSecret);
+      if (!isValid) {
+        console.error('Invalid Slack signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+    }
 
     const { type, event, team_id, event_id } = req.body;
 
