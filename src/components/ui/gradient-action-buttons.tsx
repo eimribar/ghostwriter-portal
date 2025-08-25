@@ -26,7 +26,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
   return (
     <li
       style={{ '--gradient-from': gradientFrom, '--gradient-to': gradientTo } as React.CSSProperties}
-      className={`relative w-[50px] h-[50px] bg-white shadow-lg rounded-full flex items-center justify-center transition-all duration-500 hover:w-[140px] hover:shadow-none group ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${className}`}
+      className={`relative w-[50px] h-[50px] shadow-md rounded-full flex items-center justify-center transition-all duration-500 hover:w-[140px] hover:shadow-none group ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${className}`}
       onClick={disabled ? undefined : onClick}
     >
       {/* Gradient background on hover */}
@@ -37,7 +37,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 
       {/* Icon */}
       <span className={`relative z-10 transition-all duration-500 ${!disabled && 'group-hover:scale-0'} delay-0`}>
-        <span className="text-2xl text-gray-600">{icon}</span>
+        <span className="text-2xl">{icon}</span>
       </span>
 
       {/* Title */}
@@ -66,9 +66,10 @@ export const ApproveButton: React.FC<{
   <GradientButton
     {...props}
     title="Approve"
-    icon={<IoCheckmarkCircleOutline />}
+    icon={<IoCheckmarkCircleOutline className="text-green-600" />}
     gradientFrom="#10B981"
     gradientTo="#34D399"
+    className="bg-green-50"
   />
 );
 
@@ -83,9 +84,10 @@ export const DeclineButton: React.FC<{
   <GradientButton
     {...props}
     title="Decline"
-    icon={<IoCloseCircleOutline />}
+    icon={<IoCloseCircleOutline className="text-red-600" />}
     gradientFrom="#EF4444"
     gradientTo="#F87171"
+    className="bg-red-50"
   />
 );
 
@@ -100,9 +102,10 @@ export const EditButton: React.FC<{
   <GradientButton
     {...props}
     title="Edit"
-    icon={<IoPencilOutline />}
+    icon={<IoPencilOutline className="text-blue-600" />}
     gradientFrom="#3B82F6"
     gradientTo="#60A5FA"
+    className="bg-blue-50"
   />
 );
 
@@ -117,9 +120,10 @@ export const AssignButton: React.FC<{
   <GradientButton
     {...props}
     title={title}
-    icon={<IoPersonAddOutline />}
+    icon={<IoPersonAddOutline className="text-purple-600" />}
     gradientFrom="#A855F7"
     gradientTo="#C084FC"
+    className="bg-purple-50"
   />
 );
 

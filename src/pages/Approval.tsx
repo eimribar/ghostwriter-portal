@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Save, X, Building, ChevronRight, Sparkles, Edit2, UserPlus } from 'lucide-react';
+import { Clock, Save, X, Building, ChevronRight, ChevronLeft, Sparkles, Edit2, UserPlus } from 'lucide-react';
 import { generatedContentService, type GeneratedContent, clientsService } from '../services/database.service';
 import ClientAssignmentModal from '../components/ClientAssignmentModal';
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ const Approval = () => {
   const [content, setContent] = useState<GeneratedContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContent, setSelectedContent] = useState<GeneratedContent | null>(null);
+  const [selectedContentIndex, setSelectedContentIndex] = useState<number>(-1);
   const [editingContent, setEditingContent] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -23,10 +24,39 @@ const Approval = () => {
     loadClients();
   }, [activeClient]);
 
+  // Navigation functions
+  const navigateToContent = (index: number) => {
+    if (index >= 0 && index < content.length) {
+      setSelectedContent(content[index]);
+      setSelectedContentIndex(index);
+    }
+  };
+
+  const goToPrevious = () => {
+    if (selectedContentIndex > 0) {
+      navigateToContent(selectedContentIndex - 1);
+    }
+  };
+
+  const goToNext = () => {
+    if (selectedContentIndex < content.length - 1) {
+      navigateToContent(selectedContentIndex + 1);
+    }
+  };
+
+  // Open modal with specific content
+  const openContentModal = (item: GeneratedContent) => {
+    const index = content.findIndex(c => c.id === item.id);
+    setSelectedContent(item);
+    setSelectedContentIndex(index);
+  };
+
   // Keyboard shortcuts for modal
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (!selectedContent || isEditing) return;
+      if (isEditing) return;
+      
+      if (!selectedContent) return;
       
       switch(e.key.toLowerCase()) {
         case 'a':
@@ -47,15 +77,24 @@ const Approval = () => {
             handleEdit(selectedContent);
           }
           break;
+        case 'arrowleft':
+          e.preventDefault();
+          goToPrevious();
+          break;
+        case 'arrowright':
+          e.preventDefault();
+          goToNext();
+          break;
         case 'escape':
           setSelectedContent(null);
+          setSelectedContentIndex(-1);
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [selectedContent, isEditing]);
+  }, [selectedContent, selectedContentIndex, isEditing, content]);
 
   const loadClients = async () => {
     try {
@@ -130,9 +169,23 @@ const Approval = () => {
           prevContent.filter(c => c.id !== item.id)
         );
         
-        // Close modal if this was the selected content
+        // Auto-navigate to next content if in modal
         if (selectedContent?.id === item.id) {
-          setSelectedContent(null);
+          if (selectedContentIndex < content.length - 1) {
+            // Move to next content
+            const nextIndex = selectedContentIndex; // Current index will become next after filter
+            const nextContent = content[nextIndex + 1];
+            if (nextContent) {
+              setSelectedContent(nextContent);
+              // Don't update index as it will auto-adjust after content removal
+            } else {
+              setSelectedContent(null);
+              setSelectedContentIndex(-1);
+            }
+          } else {
+            setSelectedContent(null);
+            setSelectedContentIndex(-1);
+          }
         }
         
         const clientName = item.client_id ? clients[item.client_id]?.name : 'unassigned';
@@ -161,14 +214,28 @@ const Approval = () => {
       });
       
       if (success) {
-        // Remove the rejected content from view immediately
-        setContent(prevContent => 
-          prevContent.filter(c => c.id !== item.id)
-        );
+        // Find the current index before filtering
+        const currentIndex = content.findIndex(c => c.id === item.id);
         
-        // Close modal if this was the selected content
+        // Remove the rejected content from view immediately
+        const updatedContent = content.filter(c => c.id !== item.id);
+        setContent(updatedContent);
+        
+        // If this was the selected content in modal, navigate to next or close
         if (selectedContent?.id === item.id) {
-          setSelectedContent(null);
+          if (updatedContent.length > 0 && currentIndex < updatedContent.length) {
+            // Move to the item that's now at the same index (was next)
+            setSelectedContent(updatedContent[Math.min(currentIndex, updatedContent.length - 1)]);
+            setSelectedContentIndex(Math.min(currentIndex, updatedContent.length - 1));
+          } else if (currentIndex > 0 && updatedContent.length > 0) {
+            // If we were at the end, move to previous (now last)
+            setSelectedContent(updatedContent[currentIndex - 1]);
+            setSelectedContentIndex(currentIndex - 1);
+          } else {
+            // No more content, close modal
+            setSelectedContent(null);
+            setSelectedContentIndex(-1);
+          }
         }
         
         toast.success('Content rejected and archived', {
@@ -406,7 +473,7 @@ const Approval = () => {
 
               {/* Expand Button */}
               <button
-                onClick={() => setSelectedContent(item)}
+                onClick={() => openContentModal(item)}
                 className="mt-4 text-sm text-zinc-600 hover:text-zinc-900 flex items-center gap-1"
               >
                 View full content
@@ -463,14 +530,37 @@ const Approval = () => {
         </div>
       )}
 
-      {/* Enhanced Full Content Modal with Actions */}
+      {/* Enhanced Full Content Modal with Actions and Navigation */}
       {selectedContent && !isEditing && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl relative transition-all duration-300 ease-out">
+            {/* Navigation Arrows */}
+            {selectedContentIndex > 0 && (
+              <button
+                onClick={goToPrevious}
+                className="absolute left-[-60px] top-1/2 -translate-y-1/2 p-3 bg-white rounded-full shadow-lg hover:scale-110 transition-all duration-200 z-10"
+                title="Previous (←)"
+              >
+                <ChevronLeft className="w-6 h-6 text-zinc-700" />
+              </button>
+            )}
+            {selectedContentIndex < content.length - 1 && (
+              <button
+                onClick={goToNext}
+                className="absolute right-[-60px] top-1/2 -translate-y-1/2 p-3 bg-white rounded-full shadow-lg hover:scale-110 transition-all duration-200 z-10"
+                title="Next (→)"
+              >
+                <ChevronRight className="w-6 h-6 text-zinc-700" />
+              </button>
+            )}
+            
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-zinc-200">
               <div className="flex items-center gap-4">
                 <h3 className="text-xl font-semibold">Content Review</h3>
+                <span className="text-sm text-zinc-500 font-medium">
+                  {selectedContentIndex + 1} of {content.length}
+                </span>
                 {getStatusBadge(selectedContent.status)}
                 {selectedContent.client_id && clients[selectedContent.client_id] ? (
                   <div className="flex items-center gap-2 text-sm">
@@ -486,7 +576,10 @@ const Approval = () => {
                 )}
               </div>
               <button
-                onClick={() => setSelectedContent(null)}
+                onClick={() => {
+                  setSelectedContent(null);
+                  setSelectedContentIndex(-1);
+                }}
                 className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -495,7 +588,10 @@ const Approval = () => {
             
             {/* Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="prose prose-zinc max-w-none">
+              <div 
+                key={selectedContent.id} 
+                className="prose prose-zinc max-w-none animate-fadeIn"
+              >
                 <div className="whitespace-pre-wrap text-base text-zinc-700 leading-relaxed">
                   {selectedContent.content_text}
                 </div>
