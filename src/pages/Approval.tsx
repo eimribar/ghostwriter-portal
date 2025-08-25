@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Edit2, Clock, Save, X, UserPlus, Building, ChevronRight, Sparkles } from 'lucide-react';
+import { Clock, Save, X, Building, ChevronRight, Sparkles, Edit2, UserPlus } from 'lucide-react';
 import { generatedContentService, type GeneratedContent, clientsService } from '../services/database.service';
 import ClientAssignmentModal from '../components/ClientAssignmentModal';
 import toast from 'react-hot-toast';
 import { useClientSwitch } from '../contexts/ClientSwitchContext';
+import { ApprovalActionBar } from '../components/ui/gradient-action-buttons';
 // import { useAuth } from '../contexts/AuthContext'; // Not using auth for now
 
 const Approval = () => {
@@ -372,44 +373,17 @@ const Approval = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleAssignClient(item.id)}
-                    disabled={processing === item.id}
-                    className="p-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50"
-                    title="Assign to Client"
-                  >
-                    <UserPlus className="w-5 h-5" />
-                  </button>
-                  {item.status === 'draft' && (
-                    <>
-                      <button
-                        onClick={() => handleApprove(item)}
-                        disabled={processing === item.id}
-                        className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50"
-                        title="Approve for Client"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleReject(item)}
-                        disabled={processing === item.id}
-                        className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
-                        title="Reject"
-                      >
-                        <XCircle className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleEdit(item)}
-                        disabled={processing === item.id}
-                        className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-                </div>
+                {/* Gradient Action Buttons */}
+                <ApprovalActionBar
+                  onApprove={() => handleApprove(item)}
+                  onDecline={() => handleReject(item)}
+                  onEdit={() => handleEdit(item)}
+                  onAssign={() => handleAssignClient(item.id)}
+                  disableAll={processing === item.id}
+                  disableApprove={!item.client_id}
+                  showAssign={true}
+                  assignTitle={item.client_id ? "Reassign" : "Assign"}
+                />
               </div>
 
               {/* Content Preview */}
@@ -543,57 +517,21 @@ const Approval = () => {
             
             {/* Action Bar - Fixed at Bottom */}
             <div className="border-t border-zinc-200 p-6 bg-zinc-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {/* Assign Client Button */}
-                  <button
-                    onClick={() => {
-                      setSelectedContent(null);
-                      handleAssignClient(selectedContent.id);
-                    }}
-                    disabled={processing === selectedContent.id}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    {selectedContent.client_id ? 'Reassign' : 'Assign Client'}
-                  </button>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  {/* Edit Button */}
-                  <button
-                    onClick={() => handleEdit(selectedContent)}
-                    disabled={processing === selectedContent.id}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2 relative group"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    Edit
-                    <kbd className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">E</kbd>
-                  </button>
-                  
-                  {/* Reject Button */}
-                  <button
-                    onClick={() => handleReject(selectedContent)}
-                    disabled={processing === selectedContent.id}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 relative group"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Decline
-                    <kbd className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">D</kbd>
-                  </button>
-                  
-                  {/* Approve Button - Primary Action */}
-                  <button
-                    onClick={() => handleApprove(selectedContent)}
-                    disabled={processing === selectedContent.id || !selectedContent.client_id}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium relative group"
-                    title={!selectedContent.client_id ? 'Please assign a client first' : ''}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Approve & Send
-                    <kbd className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">A</kbd>
-                  </button>
-                </div>
+              <div className="flex items-center justify-center">
+                {/* Gradient Action Buttons */}
+                <ApprovalActionBar
+                  onApprove={() => handleApprove(selectedContent)}
+                  onDecline={() => handleReject(selectedContent)}
+                  onEdit={() => handleEdit(selectedContent)}
+                  onAssign={() => {
+                    setSelectedContent(null);
+                    handleAssignClient(selectedContent.id);
+                  }}
+                  disableAll={processing === selectedContent.id}
+                  disableApprove={!selectedContent.client_id}
+                  showAssign={true}
+                  assignTitle={selectedContent.client_id ? "Reassign" : "Assign"}
+                />
               </div>
               
               {/* Warning if not assigned */}
