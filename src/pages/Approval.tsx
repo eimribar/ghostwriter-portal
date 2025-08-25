@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Edit2, Clock, Save, X, UserPlus, Building, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, Edit2, Clock, Save, X, UserPlus, Building, ChevronRight, Sparkles } from 'lucide-react';
 import { generatedContentService, type GeneratedContent, clientsService } from '../services/database.service';
 import ClientAssignmentModal from '../components/ClientAssignmentModal';
 import toast from 'react-hot-toast';
@@ -21,6 +21,40 @@ const Approval = () => {
     loadContent();
     loadClients();
   }, [activeClient]);
+
+  // Keyboard shortcuts for modal
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!selectedContent || isEditing) return;
+      
+      switch(e.key.toLowerCase()) {
+        case 'a':
+          if (!e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            handleApprove(selectedContent);
+          }
+          break;
+        case 'd':
+          if (!e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            handleReject(selectedContent);
+          }
+          break;
+        case 'e':
+          if (!e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            handleEdit(selectedContent);
+          }
+          break;
+        case 'escape':
+          setSelectedContent(null);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [selectedContent, isEditing]);
 
   const loadClients = async () => {
     try {
@@ -90,10 +124,21 @@ const Approval = () => {
       console.log('✅ Content status changed to admin_approved');
       
       if (success) {
-        // Refresh the list
-        await loadContent();
+        // Remove approved content from view (it goes to client now)
+        setContent(prevContent => 
+          prevContent.filter(c => c.id !== item.id)
+        );
+        
+        // Close modal if this was the selected content
+        if (selectedContent?.id === item.id) {
+          setSelectedContent(null);
+        }
+        
         const clientName = item.client_id ? clients[item.client_id]?.name : 'unassigned';
-        toast.success(`Content approved and sent to ${clientName} for review`);
+        toast.success(`✅ Approved and sent to ${clientName}`, {
+          duration: 2000,
+          icon: '🚀'
+        });
       } else {
         toast.error('Failed to approve content');
       }
@@ -106,17 +151,35 @@ const Approval = () => {
   };
 
   const handleReject = async (item: GeneratedContent) => {
-    const reason = prompt('Rejection reason (optional):');
     setProcessing(item.id);
     
     try {
-      await generatedContentService.update(item.id, {
+      const success = await generatedContentService.update(item.id, {
         status: 'admin_rejected',
-        revision_notes: reason || 'Rejected by admin'
+        revision_notes: 'Rejected by admin'
       });
-      await loadContent();
+      
+      if (success) {
+        // Remove the rejected content from view immediately
+        setContent(prevContent => 
+          prevContent.filter(c => c.id !== item.id)
+        );
+        
+        // Close modal if this was the selected content
+        if (selectedContent?.id === item.id) {
+          setSelectedContent(null);
+        }
+        
+        toast.success('Content rejected and archived', {
+          duration: 2000,
+          icon: '🗑️'
+        });
+      } else {
+        toast.error('Failed to reject content');
+      }
     } catch (error) {
       console.error('Error rejecting content:', error);
+      toast.error('Error rejecting content');
     } finally {
       setProcessing(null);
     }
@@ -143,8 +206,20 @@ const Approval = () => {
       });
       
       if (success) {
-        await loadContent();
-        toast.success(`Content assigned to ${clientName}`);
+        // Update the content locally without reloading
+        setContent(prevContent => 
+          prevContent.map(item => 
+            item.id === assignmentModal.contentId 
+              ? { ...item, client_id: clientId }
+              : item
+          )
+        );
+        
+        // Update clients map if needed
+        toast.success(`Content assigned to ${clientName}`, {
+          duration: 2000,
+          icon: '✅'
+        });
       } else {
         toast.error('Failed to assign content');
       }
@@ -248,15 +323,17 @@ const Approval = () => {
           <p className="text-zinc-600">Loading content...</p>
         </div>
       ) : content.length === 0 ? (
-        <div className="text-center py-12 bg-zinc-50 rounded-xl">
-          <p className="text-zinc-600">No content to review</p>
+        <div className="text-center py-16 bg-gradient-to-br from-zinc-50 to-zinc-100 rounded-2xl border border-zinc-200">
+          <Sparkles className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
+          <p className="text-xl font-medium text-zinc-600">All caught up!</p>
+          <p className="text-zinc-500 mt-2">No content pending review</p>
         </div>
       ) : (
         <div className="space-y-4">
           {content.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-xl border border-zinc-200 p-6 hover:shadow-lg transition-shadow"
+              className="bg-white rounded-xl border border-zinc-200 p-6 hover:shadow-xl hover:border-zinc-300 transition-all duration-200 transform hover:-translate-y-1"
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -412,37 +489,120 @@ const Approval = () => {
         </div>
       )}
 
-      {/* Full Content Modal */}
+      {/* Enhanced Full Content Modal with Actions */}
       {selectedContent && !isEditing && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[80vh] overflow-auto p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold">Full Content</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-zinc-200">
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl font-semibold">Content Review</h3>
+                {getStatusBadge(selectedContent.status)}
+                {selectedContent.client_id && clients[selectedContent.client_id] ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building className="w-4 h-4 text-zinc-400" />
+                    <span className="font-medium text-zinc-700">
+                      {clients[selectedContent.client_id].name}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-orange-600 font-medium">
+                    Unassigned
+                  </span>
+                )}
+              </div>
               <button
                 onClick={() => setSelectedContent(null)}
-                className="p-2 hover:bg-zinc-100 rounded-lg"
+                className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="prose prose-zinc max-w-none">
-              <div className="whitespace-pre-wrap text-sm text-zinc-700 leading-relaxed">
-                {selectedContent.content_text}
-              </div>
-            </div>
-            
-            {selectedContent.hashtags && selectedContent.hashtags.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-zinc-200">
-                <div className="flex flex-wrap gap-2">
-                  {selectedContent.hashtags.map((tag: string, i: number) => (
-                    <span key={i} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded">
-                      #{tag}
-                    </span>
-                  ))}
+            {/* Content Area - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="prose prose-zinc max-w-none">
+                <div className="whitespace-pre-wrap text-base text-zinc-700 leading-relaxed">
+                  {selectedContent.content_text}
                 </div>
               </div>
-            )}
+              
+              {selectedContent.hashtags && selectedContent.hashtags.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-zinc-200">
+                  <p className="text-sm font-medium text-zinc-600 mb-3">Hashtags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedContent.hashtags.map((tag: string, i: number) => (
+                      <span key={i} className="text-sm px-3 py-1 bg-blue-50 text-blue-600 rounded-full">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Action Bar - Fixed at Bottom */}
+            <div className="border-t border-zinc-200 p-6 bg-zinc-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Assign Client Button */}
+                  <button
+                    onClick={() => {
+                      setSelectedContent(null);
+                      handleAssignClient(selectedContent.id);
+                    }}
+                    disabled={processing === selectedContent.id}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    {selectedContent.client_id ? 'Reassign' : 'Assign Client'}
+                  </button>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  {/* Edit Button */}
+                  <button
+                    onClick={() => handleEdit(selectedContent)}
+                    disabled={processing === selectedContent.id}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2 relative group"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit
+                    <kbd className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">E</kbd>
+                  </button>
+                  
+                  {/* Reject Button */}
+                  <button
+                    onClick={() => handleReject(selectedContent)}
+                    disabled={processing === selectedContent.id}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2 relative group"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Decline
+                    <kbd className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">D</kbd>
+                  </button>
+                  
+                  {/* Approve Button - Primary Action */}
+                  <button
+                    onClick={() => handleApprove(selectedContent)}
+                    disabled={processing === selectedContent.id || !selectedContent.client_id}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium relative group"
+                    title={!selectedContent.client_id ? 'Please assign a client first' : ''}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Approve & Send
+                    <kbd className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">A</kbd>
+                  </button>
+                </div>
+              </div>
+              
+              {/* Warning if not assigned */}
+              {!selectedContent.client_id && (
+                <p className="text-sm text-orange-600 mt-3 text-right">
+                  ⚠️ Please assign a client before approving
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}
