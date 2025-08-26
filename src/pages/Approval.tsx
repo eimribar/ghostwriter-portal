@@ -114,9 +114,9 @@ const Approval = () => {
     try {
       let allContent = await generatedContentService.getAll();
       
-      // Only show drafts and admin_rejected content for review
+      // Only show draft content for review (rejected content should not reappear)
       allContent = allContent.filter(c => 
-        c.status === 'draft' || c.status === 'admin_rejected'
+        c.status === 'draft'
       );
       
       // Filter by active client if one is selected
