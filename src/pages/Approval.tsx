@@ -283,6 +283,11 @@ const Approval = () => {
           )
         );
         
+        // Update selectedContent if it's the item being assigned
+        if (selectedContent?.id === assignmentModal.contentId) {
+          setSelectedContent({ ...selectedContent, client_id: clientId });
+        }
+        
         // Update clients map if needed
         toast.success(`Content assigned to ${clientName}`, {
           duration: 2000,
@@ -619,10 +624,7 @@ const Approval = () => {
                   onApprove={() => handleApprove(selectedContent)}
                   onDecline={() => handleReject(selectedContent)}
                   onEdit={() => handleEdit(selectedContent)}
-                  onAssign={() => {
-                    setSelectedContent(null);
-                    handleAssignClient(selectedContent.id);
-                  }}
+                  onAssign={() => handleAssignClient(selectedContent.id)}
                   disableAll={processing === selectedContent.id}
                   disableApprove={!selectedContent.client_id}
                   showAssign={true}
