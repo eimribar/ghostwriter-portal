@@ -2,7 +2,7 @@ import { ArrowUpRight, User } from 'lucide-react';
 
 const PortalSwitcher = () => {
   const userPortalUrl = import.meta.env.PROD 
-    ? 'https://unified-linkedin-project.vercel.app' 
+    ? 'https://www.agentss.app' 
     : 'http://localhost:8080';
   
   return (

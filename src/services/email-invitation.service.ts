@@ -20,7 +20,7 @@ export const emailInvitationService = {
    * Generate the invitation email HTML template
    */
   generateInvitationTemplate(data: InvitationEmailData): string {
-    const invitationUrl = `https://unified-linkedin-project.vercel.app/auth?invitation=${data.invitationToken}`;
+    const invitationUrl = `https://www.agentss.app/auth?invitation=${data.invitationToken}`;
     const adminName = data.adminName || 'Your LinkedIn Content Team';
     
     // SIMPLIFIED VERSION - Testing if large HTML is the issue
@@ -68,7 +68,7 @@ export const emailInvitationService = {
    * Generate plain text version of the invitation email
    */
   generateInvitationTextTemplate(data: InvitationEmailData): string {
-    const invitationUrl = `https://unified-linkedin-project.vercel.app/auth?invitation=${data.invitationToken}`;
+    const invitationUrl = `https://www.agentss.app/auth?invitation=${data.invitationToken}`;
     const adminName = data.adminName || 'Your LinkedIn Content Team';
     
     // SIMPLIFIED VERSION

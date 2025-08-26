@@ -167,7 +167,7 @@ export const adminAuthService = {
    * Generate impersonation URL for client portal
    */
   generateImpersonationUrl(token: string, baseUrl?: string): string {
-    const clientPortalUrl = baseUrl || 'https://unified-linkedin-project.vercel.app';
+    const clientPortalUrl = baseUrl || 'https://www.agentss.app';
     return `${clientPortalUrl}/auth?impersonation=${token}`;
   },
 
@@ -258,7 +258,7 @@ export const adminAuthService = {
   async sendClientPasswordReset(clientEmail: string): Promise<{ success: boolean; error?: string }> {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(clientEmail, {
-        redirectTo: 'https://unified-linkedin-project.vercel.app/reset-password'
+        redirectTo: 'https://www.agentss.app/reset-password'
       });
 
       if (error) {

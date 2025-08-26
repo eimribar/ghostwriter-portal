@@ -242,7 +242,7 @@ const Clients = () => {
         }
         
         if (token) {
-          const invitationUrl = `https://unified-linkedin-project.vercel.app/auth?invitation=${token}`;
+          const invitationUrl = `https://www.agentss.app/auth?invitation=${token}`;
           
           // Show appropriate message based on email status
           toast.custom((t) => (
@@ -554,7 +554,7 @@ const Clients = () => {
                   
                   {/* View Client Portal - for admin to view any client's portal */}
                   <button
-                    onClick={() => window.open(`https://unified-linkedin-project.vercel.app/client-approve?client_id=${client.id}`, '_blank')}
+                    onClick={() => window.open(`https://www.agentss.app/client-approve?client_id=${client.id}`, '_blank')}
                     className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm shadow-md hover:shadow-lg transform hover:scale-105"
                     title="View client's portal"
                   >
