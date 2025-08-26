@@ -316,16 +316,44 @@ const Clients = () => {
     }
   };
 
+  const handleSaveClient = async (updatedClient: Partial<Client>) => {
+    if (!selectedClient) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .update(updatedClient)
+        .eq('id', selectedClient.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setClients(prev => prev.map(client => 
+        client.id === selectedClient.id 
+          ? { ...client, ...data, updated_at: new Date(data.updated_at) }
+          : client
+      ));
+
+      setSelectedClient(null);
+      toast.success('Client updated successfully');
+    } catch (error) {
+      console.error('Error updating client:', error);
+      toast.error('Failed to update client');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+        return 'bg-green-100 text-green-700 border-green-200';
       case 'paused':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+        return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'onboarding':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+        return 'bg-blue-100 text-blue-700 border-blue-200';
       default:
-        return 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -428,17 +456,24 @@ const Clients = () => {
             return (
               <div
                 key={client.id}
-                className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-zinc-700 transition-colors"
+                className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-xl hover:border-gray-200 transition-all duration-300 transform hover:-translate-y-1 group"
               >
                 {/* Client Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-zinc-100">{client.name}</h3>
-                    <p className="text-sm text-zinc-500">{client.role || 'Client'}</p>
-                    <p className="text-sm text-blue-400 mt-1">{client.company}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
+                      <span className="text-lg font-semibold text-gray-700">
+                        {client.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{client.name}</h3>
+                      <p className="text-sm text-gray-600">{client.role || 'Client'}</p>
+                      <p className="text-sm font-medium text-blue-600 mt-1">{client.company}</p>
+                    </div>
                   </div>
                   <span className={cn(
-                    'px-2 py-1 text-xs font-medium rounded-full border flex items-center gap-1',
+                    'px-3 py-1 text-xs font-medium rounded-full border-2 flex items-center gap-1.5 shadow-sm',
                     getStatusColor(client.status)
                   )}>
                     {getStatusIcon(client.status)}
@@ -448,24 +483,24 @@ const Clients = () => {
 
                 {/* Contact Info */}
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    <Mail className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Mail className="w-4 h-4 text-blue-500" />
                     <span className="truncate">{client.email}</span>
                   </div>
                   {client.phone && (
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                      <Phone className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Phone className="w-4 h-4 text-green-500" />
                       <span>{client.phone}</span>
                     </div>
                   )}
                   {client.linkedin_url && (
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                      <Linkedin className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Linkedin className="w-4 h-4 text-blue-600" />
                       <a
                         href={client.linkedin_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover:text-blue-400 transition-colors truncate"
+                        className="hover:text-blue-500 transition-colors truncate"
                       >
                         LinkedIn Profile
                       </a>
@@ -475,27 +510,27 @@ const Clients = () => {
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-zinc-800/50 rounded-lg p-2">
-                    <p className="text-xs text-zinc-500">Total Posts</p>
-                    <p className="text-lg font-semibold text-zinc-100">{stats.total_posts}</p>
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-100">
+                    <p className="text-xs text-gray-600 font-medium">Total Posts</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.total_posts}</p>
                   </div>
-                  <div className="bg-zinc-800/50 rounded-lg p-2">
-                    <p className="text-xs text-zinc-500">Pending</p>
-                    <p className="text-lg font-semibold text-zinc-100">{stats.pending_approvals}</p>
+                  <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-3 border border-orange-100">
+                    <p className="text-xs text-gray-600 font-medium">Pending</p>
+                    <p className="text-xl font-bold text-orange-600">{stats.pending_approvals}</p>
                   </div>
                 </div>
 
                 {/* Preferences */}
                 <div className="mb-4">
-                  <p className="text-xs text-zinc-500 mb-2">Content Preferences</p>
+                  <p className="text-xs text-gray-600 font-medium mb-2">Content Preferences</p>
                   <div className="flex flex-wrap gap-1">
                     {client.content_preferences?.topics?.slice(0, 3).map((topic, i) => (
-                      <span key={i} className="px-2 py-1 text-xs bg-zinc-800 text-zinc-400 rounded">
+                      <span key={i} className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full font-medium">
                         {topic}
                       </span>
                     ))}
                     {client.content_preferences?.topics?.length > 3 && (
-                      <span className="px-2 py-1 text-xs bg-zinc-800 text-zinc-500 rounded">
+                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full font-medium">
                         +{client.content_preferences.topics.length - 3} more
                       </span>
                     )}
@@ -503,7 +538,7 @@ const Clients = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-4 border-t border-zinc-800">
+                <div className="flex gap-2 pt-4 border-t border-gray-100">
                   {/* Login as Client button - only show if client has completed SSO setup */}
                   {client.portal_access && client.user_id && (
                     <button
@@ -520,7 +555,7 @@ const Clients = () => {
                   {/* View Client Portal - for admin to view any client's portal */}
                   <button
                     onClick={() => window.open(`https://unified-linkedin-project.vercel.app/client-approve?client_id=${client.id}`, '_blank')}
-                    className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm shadow-md hover:shadow-lg transform hover:scale-105"
                     title="View client's portal"
                   >
                     <LogIn className="w-4 h-4" />
@@ -531,7 +566,7 @@ const Clients = () => {
                   {client.portal_access && !client.user_id && (
                     <button
                       onClick={() => handleSendInvitation(client)}
-                      className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-200 text-sm shadow-md hover:shadow-lg transform hover:scale-105"
                       title="Send SSO invitation email"
                     >
                       <Mail className="w-4 h-4" />
@@ -541,7 +576,7 @@ const Clients = () => {
                   
                   <button
                     onClick={() => setSelectedClient(client)}
-                    className="flex items-center justify-center gap-1 px-3 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors text-sm"
+                    className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm shadow-md hover:shadow-lg transform hover:scale-105"
                   >
                     <Edit2 className="w-4 h-4" />
                     Edit
@@ -593,23 +628,284 @@ const Clients = () => {
         />
       )}
 
-      {/* Edit Client Modal (placeholder for now) */}
-      {selectedClient && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 max-w-2xl w-full">
-            <h3 className="text-xl font-semibold text-zinc-100 mb-4">Edit Client</h3>
-            <p className="text-zinc-500 mb-6">
-              Editing functionality for {selectedClient.name} coming soon...
-            </p>
-            <button
-              onClick={() => setSelectedClient(null)}
-              className="px-4 py-2 bg-zinc-800 text-zinc-100 rounded-lg hover:bg-zinc-700 transition-colors"
-            >
-              Close
-            </button>
+      {/* Edit Client Modal */}
+      {selectedClient && <EditClientModal client={selectedClient} onClose={() => setSelectedClient(null)} onSave={handleSaveClient} />}
+    </div>
+  );
+};
+
+// Edit Client Modal Component
+interface EditClientModalProps {
+  client: Client;
+  onClose: () => void;
+  onSave: (updatedClient: Partial<Client>) => void;
+}
+
+const EditClientModal: React.FC<EditClientModalProps> = ({ client, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    name: client.name || '',
+    email: client.email || '',
+    company: client.company || '',
+    role: client.role || '',
+    phone: client.phone || '',
+    linkedin_url: client.linkedin_url || '',
+    industry: client.industry || '',
+    status: client.status || 'active',
+    posting_frequency: client.posting_frequency || 'daily',
+    portal_access: client.portal_access || false,
+    content_preferences: {
+      tone: client.content_preferences?.tone || [],
+      topics: client.content_preferences?.topics || [],
+      formats: client.content_preferences?.formats || [],
+      avoid: client.content_preferences?.avoid || []
+    }
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await onSave(formData);
+    setIsSubmitting(false);
+  };
+
+  const handleArrayChange = (field: string, value: string) => {
+    const currentArray = formData.content_preferences[field as keyof typeof formData.content_preferences] as string[];
+    const newArray = currentArray.includes(value)
+      ? currentArray.filter(item => item !== value)
+      : [...currentArray, value];
+    
+    setFormData({
+      ...formData,
+      content_preferences: {
+        ...formData.content_preferences,
+        [field]: newArray
+      }
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          {/* Header */}
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Edit Client</h2>
+                <p className="text-gray-600 mt-1">Update {client.name}'s information</p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+
+          {/* Form Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                  <input
+                    type="text"
+                    value={formData.company}
+                    onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <input
+                    type="text"
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="e.g., CEO, Marketing Director"
+                  />
+                </div>
+              </div>
+
+              {/* Contact & Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Contact & Settings</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn URL</label>
+                  <input
+                    type="url"
+                    value={formData.linkedin_url}
+                    onChange={(e) => setFormData({...formData, linkedin_url: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Industry</label>
+                  <input
+                    type="text"
+                    value={formData.industry}
+                    onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value as Client['status']})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  >
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
+                    <option value="onboarding">Onboarding</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Posting Frequency</label>
+                  <select
+                    value={formData.posting_frequency}
+                    onChange={(e) => setFormData({...formData, posting_frequency: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="bi-weekly">Bi-weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="portal_access"
+                    checked={formData.portal_access}
+                    onChange={(e) => setFormData({...formData, portal_access: e.target.checked})}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="portal_access" className="text-sm font-medium text-gray-700">
+                    Portal Access Enabled
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Preferences */}
+            <div className="mt-8 p-6 bg-gray-50 rounded-xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Content Preferences</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Tone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tone</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Professional', 'Casual', 'Authoritative', 'Friendly', 'Expert', 'Personal'].map(tone => (
+                      <button
+                        key={tone}
+                        type="button"
+                        onClick={() => handleArrayChange('tone', tone.toLowerCase())}
+                        className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                          formData.content_preferences.tone.includes(tone.toLowerCase())
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {tone}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Topics */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Topics</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Leadership', 'Technology', 'Business', 'Innovation', 'Strategy', 'Growth', 'Marketing', 'Sales'].map(topic => (
+                      <button
+                        key={topic}
+                        type="button"
+                        onClick={() => handleArrayChange('topics', topic.toLowerCase())}
+                        className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                          formData.content_preferences.topics.includes(topic.toLowerCase())
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {topic}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-gray-200 bg-gray-50">
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
