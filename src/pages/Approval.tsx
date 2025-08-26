@@ -310,17 +310,35 @@ const Approval = () => {
     
     setProcessing(selectedContent.id);
     try {
-      await generatedContentService.update(selectedContent.id, {
+      const success = await generatedContentService.update(selectedContent.id, {
         content_text: editingContent,
         status: 'draft',
         revision_notes: 'Edited via approval queue - needs re-approval'
       });
       
-      setIsEditing(false);
-      setSelectedContent(null);
-      await loadContent();
+      if (success) {
+        // Update the content locally without reloading
+        setContent(prevContent => 
+          prevContent.map(item => 
+            item.id === selectedContent.id 
+              ? { ...item, content_text: editingContent }
+              : item
+          )
+        );
+        
+        // Update selectedContent with the edited text
+        setSelectedContent({ ...selectedContent, content_text: editingContent });
+        
+        // Only close the edit modal, keep preview modal open
+        setIsEditing(false);
+        
+        toast.success('Content updated successfully');
+      } else {
+        toast.error('Failed to update content');
+      }
     } catch (error) {
       console.error('Error saving edit:', error);
+      toast.error('Error saving edit');
     } finally {
       setProcessing(null);
     }
