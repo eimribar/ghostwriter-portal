@@ -293,15 +293,16 @@ const Generate = () => {
               ]}
             />
             {activeClient && (
-            <div className="bg-zinc-100 rounded-lg px-4 py-2 flex items-center gap-2">
-              <Building className="w-4 h-4 text-zinc-600" />
-              <div>
-                <p className="text-xs text-zinc-500">Generating for</p>
-                <p className="text-sm font-medium text-zinc-900">{activeClient.name}</p>
-                <p className="text-xs text-zinc-600">{activeClient.company}</p>
+              <div className="bg-zinc-100 rounded-lg px-4 py-2 flex items-center gap-2">
+                <Building className="w-4 h-4 text-zinc-600" />
+                <div>
+                  <p className="text-xs text-zinc-500">Generating for</p>
+                  <p className="text-sm font-medium text-zinc-900">{activeClient.name}</p>
+                  <p className="text-xs text-zinc-600">{activeClient.company}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
