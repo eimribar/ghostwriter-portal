@@ -488,6 +488,42 @@ export const generatedContentService = {
     console.log('Update successful:', data);
     return true;
   },
+
+  async createManualContent(clientId: string, contentText: string, userId?: string): Promise<GeneratedContent | null> {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase not configured, cannot create manual content');
+      return null;
+    }
+    
+    console.log('Creating manual content for client:', clientId);
+    
+    const { data, error } = await supabase
+      .from('generated_content')
+      .insert([{
+        client_id: clientId,
+        user_id: userId,
+        variant_number: 1,
+        content_text: contentText,
+        hook: '',
+        hashtags: [],
+        llm_provider: 'manual' as const,
+        llm_model: 'human',
+        status: 'admin_approved' as const, // Send directly to client approval
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating manual content:', error);
+      console.error('Error details:', error.message, error.details);
+      return null;
+    }
+    
+    console.log('Manual content created successfully:', data);
+    return data;
+  },
 };
 
 // =====================================================

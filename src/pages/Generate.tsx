@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe, Plus, Building } from 'lucide-react';
+import { Sparkles, RefreshCw, Copy, Check, ChevronRight, Wand2, CheckCircle, Users, Settings, Globe, Plus, Building, PenTool, Send } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateLinkedInVariations, generateWithPrompt } from '../lib/llm-service';
 import { generatedContentService, clientsService, promptTemplatesService, type Client, type PromptTemplate } from '../services/database.service';
 import { useClientSwitch } from '../contexts/ClientSwitchContext';
+import { ModeToggle } from '../components/ui/ModeToggle';
 // import { useAuth } from '../contexts/AuthContext'; // Not using auth for now
 
 interface GeneratedVariation {
@@ -18,6 +19,11 @@ interface GeneratedVariation {
 const Generate = () => {
   // const { user } = useAuth(); // Commented out - not using user for now
   const { activeClient } = useClientSwitch(); // Get active client from context
+  
+  // Mode state for AI vs Manual
+  const [mode, setMode] = useState<'ai' | 'manual'>('ai');
+  
+  // AI Generation states
   const [contentIdea, setContentIdea] = useState('');
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -33,6 +39,10 @@ const Generate = () => {
   const [showPromptDetails, setShowPromptDetails] = useState(false);
   const [numberOfVariations, setNumberOfVariations] = useState(4);
   const [variationStrategy, setVariationStrategy] = useState<'same-prompt' | 'different-prompts' | 'mixed-category'>('different-prompts');
+  
+  // Manual Content states
+  const [manualContent, setManualContent] = useState('');
+  const [manualClientId, setManualClientId] = useState<string>('');
 
   useEffect(() => {
     loadClients();
@@ -222,6 +232,44 @@ const Generate = () => {
     }
   };
 
+  const handleManualContentSend = async () => {
+    if (!manualContent.trim()) {
+      alert('Please write some content');
+      return;
+    }
+
+    const clientToUse = manualClientId || activeClient?.id;
+    if (!clientToUse) {
+      alert('Please select a client');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await generatedContentService.createManualContent(
+        clientToUse,
+        manualContent,
+        undefined // userId - not using auth for now
+      );
+
+      if (result) {
+        alert('Content sent to client for approval!');
+        setManualContent('');
+        setSavedToDb(true);
+      } else {
+        alert('Failed to send content');
+      }
+    } catch (error) {
+      console.error('Error sending manual content:', error);
+      alert('Failed to send content');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const characterCount = manualContent.length;
+  const characterLimit = 3000;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -230,10 +278,21 @@ const Generate = () => {
           <div>
             <h1 className="text-3xl font-bold text-zinc-900">Generate Content</h1>
             <p className="text-zinc-600 mt-2">
-              Enter your content idea and generate unique LinkedIn post variations
+              {mode === 'ai' 
+                ? 'Enter your content idea and generate unique LinkedIn post variations'
+                : 'Write custom content for your clients'}
             </p>
           </div>
-          {activeClient && (
+          <div className="flex items-center gap-4">
+            <ModeToggle
+              value={mode}
+              onValueChange={(v) => setMode(v as 'ai' | 'manual')}
+              options={[
+                { value: 'ai', label: 'AI Generation', icon: <Sparkles className="h-4 w-4" /> },
+                { value: 'manual', label: 'Manual Creation', icon: <PenTool className="h-4 w-4" /> }
+              ]}
+            />
+            {activeClient && (
             <div className="bg-zinc-100 rounded-lg px-4 py-2 flex items-center gap-2">
               <Building className="w-4 h-4 text-zinc-600" />
               <div>
@@ -252,9 +311,91 @@ const Generate = () => {
         <div>
           <div className="bg-white rounded-xl border border-zinc-200 p-6">
             <div className="flex items-center gap-2 mb-6">
-              <Wand2 className="w-5 h-5 text-zinc-700" />
-              <h2 className="text-lg font-semibold text-zinc-900">Content Generation</h2>
+              {mode === 'ai' ? (
+                <>
+                  <Wand2 className="w-5 h-5 text-zinc-700" />
+                  <h2 className="text-lg font-semibold text-zinc-900">AI Content Generation</h2>
+                </>
+              ) : (
+                <>
+                  <PenTool className="w-5 h-5 text-zinc-700" />
+                  <h2 className="text-lg font-semibold text-zinc-900">Manual Content Creation</h2>
+                </>
+              )}
             </div>
+
+            {mode === 'manual' ? (
+              // Manual Content Mode
+              <>
+                <div className="mb-6">
+                  <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 mb-2">
+                    <Users className="w-4 h-4" />
+                    Select Client
+                  </label>
+                  <select
+                    value={manualClientId || activeClient?.id || ''}
+                    onChange={(e) => setManualClientId(e.target.value)}
+                    className="w-full px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                    disabled={loadingClients}
+                  >
+                    <option value="">Select a client...</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name} - {client.company}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-zinc-700">
+                      LinkedIn Post Content
+                    </label>
+                    <span className={cn(
+                      "text-xs",
+                      characterCount > characterLimit ? "text-red-500" : "text-zinc-500"
+                    )}>
+                      {characterCount} / {characterLimit}
+                    </span>
+                  </div>
+                  <textarea
+                    value={manualContent}
+                    onChange={(e) => setManualContent(e.target.value)}
+                    placeholder="Write your LinkedIn post here..."
+                    className="w-full h-64 px-4 py-3 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 resize-none"
+                  />
+                  <p className="text-xs text-zinc-500 mt-2">
+                    💡 Tip: Keep it engaging and under 3000 characters for optimal LinkedIn performance.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleManualContentSend}
+                  disabled={saving || !manualContent.trim() || characterCount > characterLimit || !(manualClientId || activeClient?.id)}
+                  className={cn(
+                    "w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2",
+                    saving || !manualContent.trim() || characterCount > characterLimit || !(manualClientId || activeClient?.id)
+                      ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                      : "bg-zinc-900 text-white hover:bg-zinc-800"
+                  )}
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send to Client Approval
+                    </>
+                  )}
+                </button>
+              </>
+            ) : (
+              // AI Generation Mode (existing content)
+              <>
 
             {/* Client Selection - OPTIONAL (hidden for now) */}
             {false && (
@@ -435,7 +576,9 @@ const Generate = () => {
                 </>
               )}
             </button>
-          </div>
+                </>
+              )}
+            </div>
 
           {/* Save Status Indicator */}
           {(saving || savedToDb) && (
