@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare, MessageCircle, CalendarDays, Shield, LogIn } from 'lucide-react';
+import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare, MessageCircle, CalendarDays, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { generatedContentService } from '../services/database.service';
 import { ClientSwitcher } from './ClientSwitcher';
@@ -191,11 +191,6 @@ const Navigation = () => {
         <NavLink to="/clients" className={linkClass}>
           <Users className="h-4 w-4" />
           Clients
-        </NavLink>
-        
-        <NavLink to="/admin-client-auth" className={linkClass}>
-          <Shield className="h-4 w-4" />
-          Client Auth
         </NavLink>
         
         <NavLink to="/slack-settings" className={linkClass}>
