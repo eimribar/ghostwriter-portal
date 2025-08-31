@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare, MessageCircle, CalendarDays, Shield } from 'lucide-react';
+import { Database, Sparkles, Calendar, BarChart3, Settings, Users, Lightbulb, LogOut, CheckSquare, FileCode, MessageSquare, MessageCircle, CalendarDays, Shield, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { generatedContentService } from '../services/database.service';
 import { ClientSwitcher } from './ClientSwitcher';
 import { useClientSwitch } from '../contexts/ClientSwitchContext';
 import NotificationBell from './NotificationBell';
+import { adminAuthService } from '../services/admin-auth.service';
+import toast from 'react-hot-toast';
 
 const Navigation = () => {
   const { signOut, user } = useAuth();
@@ -85,17 +87,48 @@ const Navigation = () => {
         </div>
         <ClientSwitcher className="w-full" />
         {activeClient && (
-          <div className="mt-2 p-2 bg-zinc-50 rounded-lg">
-            <div className="text-xs text-zinc-600">
-              <div className="font-medium">{activeClient.company}</div>
-              <div className="text-zinc-500 mt-0.5">
-                {activeClient.content_preferences?.tone?.slice(0, 2).join(', ')}
-                {activeClient.content_preferences?.tone && activeClient.content_preferences.tone.length > 2 && (
-                  <span> +{activeClient.content_preferences.tone.length - 2} more</span>
-                )}
+          <>
+            <div className="mt-2 p-2 bg-zinc-50 rounded-lg">
+              <div className="text-xs text-zinc-600">
+                <div className="font-medium">{activeClient.company}</div>
+                <div className="text-zinc-500 mt-0.5">
+                  {activeClient.content_preferences?.tone?.slice(0, 2).join(', ')}
+                  {activeClient.content_preferences?.tone && activeClient.content_preferences.tone.length > 2 && (
+                    <span> +{activeClient.content_preferences.tone.length - 2} more</span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+            {/* View as Client Button */}
+            <button
+              onClick={async () => {
+                toast.loading('Creating impersonation session...', { id: 'impersonate' });
+                try {
+                  const result = await adminAuthService.createImpersonationToken(
+                    activeClient.id,
+                    'Admin viewing client portal via navigation',
+                    undefined,
+                    navigator.userAgent
+                  );
+                  
+                  if (result.success && result.session) {
+                    const impersonationUrl = adminAuthService.generateImpersonationUrl(result.session.token);
+                    window.open(impersonationUrl, '_blank');
+                    toast.success('Opening client portal...', { id: 'impersonate' });
+                  } else {
+                    throw new Error(result.error || 'Failed to create impersonation session');
+                  }
+                } catch (error) {
+                  console.error('Error creating impersonation:', error);
+                  toast.error('Failed to impersonate client', { id: 'impersonate' });
+                }
+              }}
+              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors text-sm font-medium"
+            >
+              <LogIn className="w-4 h-4" />
+              View as Client
+            </button>
+          </>
         )}
       </div>
 

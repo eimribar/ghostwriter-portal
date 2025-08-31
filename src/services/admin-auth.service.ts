@@ -337,5 +337,13 @@ export const adminAuthService = {
       // Force redirect even if ending session failed
       window.location.href = 'https://ghostwriter-portal.vercel.app';
     }
+  },
+
+  /**
+   * Generate client portal URL with impersonation token
+   */
+  generateImpersonationUrl(token: string): string {
+    // Use production URL for client portal with impersonation token
+    return `https://www.agentss.app/client-approve?impersonation=${token}`;
   }
 };
