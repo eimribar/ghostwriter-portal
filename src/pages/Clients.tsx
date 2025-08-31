@@ -1,6 +1,7 @@
 // =====================================================
-// CLIENTS PAGE - Real Database Integration
-// No mock data - Production ready
+// CLIENTS MANAGEMENT PAGE
+// Purpose: Manage client profiles, settings, and onboarding
+// For impersonation and auth management, see AdminClientAuth
 // =====================================================
 
 import { useState, useEffect } from 'react';
@@ -383,8 +384,14 @@ const Clients = () => {
         <div className="flex items-center gap-3">
           <Users className="w-8 h-8 text-blue-500" />
           <div>
-            <h1 className="text-3xl font-bold text-zinc-100">Clients</h1>
-            <p className="text-zinc-500 mt-1">Manage your client portfolio</p>
+            <h1 className="text-3xl font-bold text-zinc-100">Client Management</h1>
+            <p className="text-zinc-500 mt-1">Manage profiles, settings, and onboarding</p>
+            <p className="text-sm text-zinc-400 mt-1">
+              Need to impersonate a client? Visit{' '}
+              <a href="/admin-client-auth" className="text-blue-400 hover:text-blue-300 underline">
+                Admin Client Auth
+              </a>
+            </p>
           </div>
         </div>
         <button
@@ -539,28 +546,26 @@ const Clients = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-4 border-t border-gray-100">
-                  {/* Login as Client button - only show if client has completed SSO setup */}
-                  {client.portal_access && client.user_id && (
+                  {/* View Client Portal - Uses impersonation if client has account */}
+                  {client.portal_access && (
                     <button
-                      onClick={() => handleImpersonate(client)}
+                      onClick={() => {
+                        if (client.user_id) {
+                          // Client has account - use impersonation
+                          handleImpersonate(client);
+                        } else {
+                          // Client hasn't signed up yet - just open portal with client_id
+                          toast.error('Client must complete signup first. Send them an invitation.');
+                        }
+                      }}
                       disabled={impersonating === client.id}
-                      className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Login as this client (impersonation)"
+                      className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={client.user_id ? "View as client (impersonation)" : "Client hasn't completed signup"}
                     >
                       <LogIn className="w-4 h-4" />
-                      {impersonating === client.id ? 'Opening...' : 'Login as Client'}
+                      {impersonating === client.id ? 'Opening...' : 'View Portal'}
                     </button>
                   )}
-                  
-                  {/* View Client Portal - for admin to view any client's portal */}
-                  <button
-                    onClick={() => window.open(`https://www.agentss.app/client-approve?client_id=${client.id}`, '_blank')}
-                    className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm shadow-md hover:shadow-lg transform hover:scale-105"
-                    title="View client's portal"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    View Portal
-                  </button>
                   
                   {/* Send Invitation button - only show if client hasn't completed SSO setup */}
                   {client.portal_access && !client.user_id && (
