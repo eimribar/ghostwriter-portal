@@ -174,17 +174,13 @@ const Clients = () => {
       return;
     }
 
-    // Check if client has portal access and auth_user_id
+    // Check if client has portal access
     if (!client.portal_access) {
       toast.error('Client does not have portal access enabled');
       return;
     }
 
-    if (!client.user_id) {
-      toast.error('Client has not completed SSO setup yet');
-      return;
-    }
-
+    // Allow impersonation even if client hasn't signed up yet
     setImpersonating(client.id);
     toast.loading('Creating impersonation session...', { id: 'impersonate' });
 
@@ -546,21 +542,13 @@ const Clients = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-4 border-t border-gray-100">
-                  {/* View Client Portal - Uses impersonation if client has account */}
+                  {/* View Client Portal - Always allow impersonation */}
                   {client.portal_access && (
                     <button
-                      onClick={() => {
-                        if (client.user_id) {
-                          // Client has account - use impersonation
-                          handleImpersonate(client);
-                        } else {
-                          // Client hasn't signed up yet - just open portal with client_id
-                          toast.error('Client must complete signup first. Send them an invitation.');
-                        }
-                      }}
+                      onClick={() => handleImpersonate(client)}
                       disabled={impersonating === client.id}
                       className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={client.user_id ? "View as client (impersonation)" : "Client hasn't completed signup"}
+                      title="View as client (impersonation)"
                     >
                       <LogIn className="w-4 h-4" />
                       {impersonating === client.id ? 'Opening...' : 'View Portal'}
