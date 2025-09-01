@@ -149,7 +149,7 @@ export default async function handler(req, res) {
     }
 
     // Step 3: Prepare the prompt with transcript
-    const fullPrompt = promptTemplate.prompt_text.replace('{INSERT TRANSCRIPT}', transcript);
+    const fullPrompt = promptTemplate.system_message.replace('{INSERT TRANSCRIPT}', transcript);
     
     console.log('🤖 Processing with GPT-5...');
     
