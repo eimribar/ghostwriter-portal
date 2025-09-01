@@ -167,14 +167,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // Step 3: Prepare the prompt for GPT-5 Responses API (thinking model)
-    console.log('🤖 Processing with GPT-5 Responses API (thinking model)...');
+    // Step 3: Prepare GPT-5 Chat Completions API call (matches n8n workflow)
+    console.log('🤖 Processing with GPT-5 Chat Completions API...');
     
-    // Combine system message and transcript data like your working implementations
-    const fullPrompt = promptTemplate.system_message + "\n\n=Transcript : \n\n" + JSON.stringify(apifyData);
-    
-    // Step 4: Call GPT-5 Responses API (matches your working process-search.js format)
-    const gpt5Response = await fetch('https://api.openai.com/v1/responses', {
+    // Step 4: Call GPT-5 Chat Completions API (system + user messages)
+    const gpt5Response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -182,16 +179,19 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-5',
-        input: [{
-          role: 'user',
-          content: [{
-            type: 'input_text',
-            text: fullPrompt
-          }]
-        }],
-        reasoning: { effort: 'medium' },
-        temperature: 0.8,
-        max_output_tokens: 4000
+        messages: [
+          {
+            role: 'system',
+            content: promptTemplate.system_message
+          },
+          {
+            role: 'user',
+            content: `=Transcript : \n\n${JSON.stringify(apifyData)}`
+          }
+        ],
+        reasoning_effort: 'medium',
+        temperature: 1,
+        max_tokens: 128000
       })
     });
 
@@ -203,19 +203,10 @@ export default async function handler(req, res) {
 
     const gpt5Data = await gpt5Response.json();
     
-    // Extract the response text from GPT-5 Responses API format (matches your working implementations)
+    // Extract response from Chat Completions API format
     let responseText = '';
-    if (gpt5Data.output && gpt5Data.output.length > 0) {
-      // Look for message type in output array
-      const messageOutput = gpt5Data.output.find(item => item.type === 'message');
-      if (messageOutput && messageOutput.content && messageOutput.content.length > 0) {
-        responseText = messageOutput.content[0].text;
-      }
-    }
-    
-    // Fallback: check for direct output_text field
-    if (!responseText && gpt5Data.output_text) {
-      responseText = gpt5Data.output_text;
+    if (gpt5Data.choices && gpt5Data.choices.length > 0) {
+      responseText = gpt5Data.choices[0].message?.content || '';
     }
 
     if (!responseText) {
