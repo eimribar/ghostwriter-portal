@@ -167,11 +167,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // Step 3: Prepare GPT-5 Chat Completions API call (matches n8n workflow)
-    console.log('🤖 Processing with GPT-5 Chat Completions API...');
+    // Step 3: Prepare GPT-5 Responses API call (matches working process-search.js)
+    console.log('🤖 Processing with GPT-5 Responses API...');
     
-    // Step 4: Call GPT-5 Chat Completions API (system + user messages)
-    const gpt5Response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Step 4: Call GPT-5 Responses API (EXACT format from process-search.js)
+    const gpt5Response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -179,19 +179,25 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-5',
-        messages: [
+        input: [
           {
-            role: 'system',
-            content: promptTemplate.system_message
+            role: 'developer',
+            content: [{
+              type: 'input_text',
+              text: promptTemplate.system_message
+            }]
           },
           {
             role: 'user',
-            content: `=Transcript : \n\n${JSON.stringify(apifyData)}`
+            content: [{
+              type: 'input_text',
+              text: `=Transcript : \n\n${JSON.stringify(apifyData)}`
+            }]
           }
         ],
-        reasoning_effort: 'medium',
+        reasoning: { effort: 'medium' },
         temperature: 1,
-        max_tokens: 128000
+        max_output_tokens: 8192
       })
     });
 
@@ -203,10 +209,23 @@ export default async function handler(req, res) {
 
     const gpt5Data = await gpt5Response.json();
     
-    // Extract response from Chat Completions API format
+    // Extract response from Responses API format (EXACT match to process-search.js)
     let responseText = '';
-    if (gpt5Data.choices && gpt5Data.choices.length > 0) {
-      responseText = gpt5Data.choices[0].message?.content || '';
+    
+    if (gpt5Data.output && Array.isArray(gpt5Data.output)) {
+      // Find the message output (usually the second item)
+      const messageOutput = gpt5Data.output.find(o => o.type === 'message');
+      if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+        const textContent = messageOutput.content.find(c => c.type === 'output_text');
+        if (textContent && textContent.text) {
+          responseText = textContent.text;
+        }
+      }
+    }
+    
+    // Fallback to other possible locations
+    if (!responseText) {
+      responseText = gpt5Data.content || gpt5Data.text || gpt5Data.response || '';
     }
 
     if (!responseText) {
