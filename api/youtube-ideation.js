@@ -95,68 +95,25 @@ export default async function handler(req, res) {
     const apifyData = await apifyResponse.json();
     console.log('✅ Apify response received:', apifyData?.length || 0, 'items');
     
-    // Enhanced debugging: Log the full structure of the first item
-    if (apifyData && apifyData.length > 0) {
-      console.log('📋 Apify data structure (first item):', JSON.stringify(apifyData[0], null, 2));
-    }
+    // Log the full Apify response structure for debugging
+    console.log('📋 Full Apify response structure:', JSON.stringify(apifyData, null, 2));
 
     if (!apifyData || apifyData.length === 0) {
       return res.status(400).json({ 
-        error: 'No transcript data returned from Apify', 
-        details: 'The video may not have captions or subtitles available'
+        error: 'No data returned from Apify', 
+        details: 'The video may not be accessible or may not have available data'
       });
     }
 
-    // Extract transcript text and video metadata with multiple fallbacks
-    const transcriptData = apifyData[0];
-    
-    // Try multiple fields for transcript (enhanced fallback)
-    const transcript = transcriptData.transcript || 
-                      transcriptData.text || 
-                      transcriptData.captions || 
-                      transcriptData.subtitles ||
-                      transcriptData.transcription ||
-                      (transcriptData.items && transcriptData.items.map(item => item.text).join(' ')) ||
-                      '';
-    
-    // Try multiple fields for video title
-    const videoTitle = transcriptData.title || 
-                      transcriptData.videoTitle || 
-                      transcriptData.name ||
-                      'YouTube Video';
-    
-    // Try multiple fields for channel name
-    const channelName = transcriptData.channelName || 
-                       transcriptData.channel || 
-                       transcriptData.channelTitle ||
-                       transcriptData.author ||
-                       transcriptData.uploader ||
-                       'Unknown Channel';
+    // Extract video metadata for storage (if available)
+    const firstItem = apifyData[0] || {};
+    const videoTitle = firstItem.title || firstItem.videoTitle || firstItem.name || 'YouTube Video';
+    const channelName = firstItem.channelName || firstItem.channel || firstItem.channelTitle || firstItem.author || firstItem.uploader || 'Unknown Channel';
 
-    console.log('📊 Transcript extraction results:', {
-      transcriptLength: transcript.length,
+    console.log('📊 Video metadata extracted:', {
       videoTitle: videoTitle,
       channelName: channelName,
-      availableFields: Object.keys(transcriptData)
-    });
-
-    if (!transcript || transcript.trim().length === 0) {
-      console.error('❌ No transcript content found');
-      console.log('Available data fields:', Object.keys(transcriptData));
-      console.log('Sample of transcriptData:', JSON.stringify(transcriptData, null, 2));
-      
-      return res.status(400).json({ 
-        error: 'No transcript found in the video',
-        details: 'This video may not have captions, subtitles, or auto-generated transcripts available. Try a different video with captions enabled.',
-        availableFields: Object.keys(transcriptData),
-        debugInfo: process.env.NODE_ENV === 'development' ? transcriptData : undefined
-      });
-    }
-
-    console.log('📊 Transcript extracted:', {
-      length: transcript.length,
-      title: videoTitle,
-      channel: channelName
+      dataItemsCount: apifyData.length
     });
 
     // Step 2: Get the prompt template for YouTube content generation
@@ -214,12 +171,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // Step 3: Prepare the prompt with transcript
-    const fullPrompt = promptTemplate.system_message.replace('{INSERT TRANSCRIPT}', transcript);
-    
+    // Step 3: Prepare the prompt exactly like n8n workflow
     console.log('🤖 Processing with GPT-5...');
     
-    // Step 4: Call GPT-5 API with the transcript and prompt
+    // Step 4: Call GPT-5 API with separate system and user messages (like n8n)
     const gpt5Response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -228,10 +183,16 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-5',
-        messages: [{
-          role: 'user',
-          content: fullPrompt
-        }],
+        messages: [
+          {
+            role: 'system',
+            content: promptTemplate.system_message
+          },
+          {
+            role: 'user',
+            content: `=Transcript : \n\n${JSON.stringify(apifyData)}`
+          }
+        ],
         temperature: 0.8,
         max_tokens: 4000
       })
@@ -284,12 +245,13 @@ export default async function handler(req, res) {
             video_url: videoUrl,
             video_title: videoTitle,
             channel_name: channelName,
-            transcript_length: transcript.length,
+            apify_data_items: apifyData.length,
             prompt_used: promptTemplate.name,
             prompt_id: promptTemplate.id,
             idea_number: i + 1,
             total_ideas: ideas.length,
-            extracted_at: new Date().toISOString()
+            extracted_at: new Date().toISOString(),
+            processing_method: 'n8n_workflow_replication'
           },
           created_at: new Date().toISOString()
         })
@@ -313,7 +275,7 @@ export default async function handler(req, res) {
         url: videoUrl,
         title: videoTitle,
         channel: channelName,
-        transcriptLength: transcript.length
+        apifyDataItems: apifyData.length
       },
       promptUsed: {
         id: promptTemplate.id,
@@ -321,7 +283,7 @@ export default async function handler(req, res) {
       },
       ideas: savedIdeas,
       totalIdeas: savedIdeas.length,
-      processing_time_seconds: Math.round((Date.now() - Date.now()) / 1000) // Will be calculated properly
+      processingMethod: 'n8n_workflow_replication'
     });
 
   } catch (error) {
@@ -358,39 +320,53 @@ export default async function handler(req, res) {
 }
 
 /**
- * Parse content ideas from GPT-5 response
- * Expects 5 numbered content ideas
+ * Parse content ideas from GPT-5 response - matches n8n Code node logic exactly
  */
 function parseContentIdeas(responseText) {
-  const ideas = [];
-  
   try {
-    // Split by numbered list patterns (1., 2., etc.)
-    const sections = responseText.split(/(?:^|\n)\s*(\d+)\.?\s+/m);
+    console.log('📝 Parsing GPT-5 response (first 500 chars):', responseText.substring(0, 500));
     
-    // Skip first empty section, then take every other section (the content after numbers)
-    for (let i = 2; i < sections.length; i += 2) {
-      const idea = sections[i]?.trim();
-      if (idea && idea.length > 20) { // Only include substantial ideas
-        ideas.push(idea);
+    // Split the text into sections - each idea is separated by double newlines
+    let sections = responseText.split('\n\n').filter(section => section.trim() !== '');
+    
+    // Remove the intro line if it exists
+    if (sections.length > 0 && sections[0].toLowerCase().includes('content idea')) {
+      sections = sections.slice(1);
+    }
+    
+    // If still not enough ideas, try splitting by numbered patterns
+    if (sections.length < 5) {
+      // Try splitting by patterns like "1)" or "1." at the start of lines
+      const numberedSections = responseText.split(/\n(?=\d+[\.)]\s)/).filter(s => s.trim());
+      
+      // Remove any intro text
+      const startIndex = numberedSections.findIndex(s => /^\d+[\.)]\s/.test(s.trim()));
+      if (startIndex >= 0) {
+        sections = numberedSections.slice(startIndex);
       }
     }
     
-    // Fallback: Split by double newlines if numbered parsing fails
-    if (ideas.length === 0) {
-      const paragraphs = responseText.split(/\n\n+/).filter(p => p.trim().length > 20);
-      ideas.push(...paragraphs.slice(0, 5));
-    }
-    
-    // Fallback: Split by single newlines
-    if (ideas.length === 0) {
-      const lines = responseText.split('\n').filter(line => line.trim().length > 20);
-      ideas.push(...lines.slice(0, 5));
-    }
+    // Process each idea - match n8n Code node logic exactly
+    const ideas = sections.slice(0, 5).map((idea, index) => {
+      // Clean up the idea text
+      const cleanIdea = idea.trim()
+        .replace(/^[\d\.)]+\s*/, '') // Remove leading numbers like "1)" or "1."
+        .replace(/^\*\*/, '') // Remove leading bold markers
+        .replace(/\*\*$/, ''); // Remove trailing bold markers
+      
+      return cleanIdea;
+    }).filter(idea => idea && idea.length > 20); // Only include substantial ideas
     
     console.log('📝 Parsed ideas count:', ideas.length);
     
-    return ideas.slice(0, 5); // Ensure we only return 5 ideas max
+    // Ensure we return at least something
+    if (ideas.length === 0) {
+      console.error('❌ Could not parse any content ideas');
+      console.log('Raw response text:', responseText);
+      return [];
+    }
+    
+    return ideas;
     
   } catch (error) {
     console.error('❌ Error parsing content ideas:', error);

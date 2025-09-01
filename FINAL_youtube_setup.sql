@@ -105,9 +105,7 @@ Em-dashes (—)
 "elevate"
 "Delve"
 
-the core narrative we want to push is data hygiene and AI agents. so we need to somehow tie the content ideas to this in a thought leadership way.
-
-Transcript: "{INSERT TRANSCRIPT}"',
+the core narrative we want to push is data hygiene and AI agents. so we need to somehow tie the content ideas to this in a thought leadership way.',
   'openai',
   'gpt-4',
   ARRAY['youtube', 'transcript', 'video', 'revops', 'ideation'],
@@ -148,9 +146,7 @@ INSERT INTO prompt_templates (
 
 Focus on extracting the core insights and making them your own. Avoid using the exact words or phrases from the transcript.
 
-Format as a numbered list with each idea being 2-3 sentences long.
-
-Transcript: "{INSERT TRANSCRIPT}"',
+Format as a numbered list with each idea being 2-3 sentences long.',
   'openai',
   'gpt-4',
   ARRAY['youtube', 'transcript', 'simple', 'linkedin'],
