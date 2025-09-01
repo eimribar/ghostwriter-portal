@@ -12,11 +12,14 @@ import {
   TrendingUp,
   ArrowRight,
   Clock,
-  Trash2
+  Trash2,
+  Youtube,
+  Play
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { contentIdeasService, type ContentIdeaDB } from '../services/database.service';
 import { searchJobsService, type SearchJob } from '../services/search-jobs.service';
+import { youTubeTranscriptService } from '../services/youtube-transcript.service';
 import { supabase } from '../lib/supabase';
 
 interface IdeaWithUI extends ContentIdeaDB {
@@ -30,8 +33,11 @@ const Ideation = () => {
   const [selectedIdea, setSelectedIdea] = useState<IdeaWithUI | null>(null);
   const [activeJobs, setActiveJobs] = useState<SearchJob[]>([]);
   const [showNewIdeaModal, setShowNewIdeaModal] = useState(false);
+  const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [youtubeProcessing, setYoutubeProcessing] = useState(false);
 
   // Load ideas on mount
   useEffect(() => {
@@ -113,6 +119,60 @@ const Ideation = () => {
     }
   };
 
+  const handleYouTubeSubmit = async () => {
+    if (!youtubeUrl.trim()) {
+      setError('Please enter a YouTube URL');
+      return;
+    }
+
+    if (!youTubeTranscriptService.isValidYouTubeUrl(youtubeUrl)) {
+      setError('Please enter a valid YouTube URL');
+      return;
+    }
+
+    setYoutubeProcessing(true);
+    setError(null);
+
+    try {
+      console.log('🎬 Processing YouTube video:', youtubeUrl);
+      
+      const result = await youTubeTranscriptService.processVideo({
+        videoUrl: youtubeUrl
+      });
+
+      if (result.success) {
+        console.log('✅ YouTube processing successful:', result.totalIdeas, 'ideas generated');
+        
+        // Close modal and reset form
+        setShowYouTubeModal(false);
+        setYoutubeUrl('');
+        
+        // Reload ideas to show new ones
+        await loadIdeas();
+        
+        // Show success message
+        const videoTitle = result.videoData?.title || 'video';
+        setError(null);
+        
+        // Show a success notification (you could use a toast library instead)
+        setTimeout(() => {
+          setError(`✅ Generated ${result.totalIdeas} content ideas from "${videoTitle}"`);
+          setTimeout(() => setError(null), 5000);
+        }, 500);
+        
+      } else {
+        console.error('❌ YouTube processing failed:', result.error);
+        setError(result.error || 'Failed to process YouTube video');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ YouTube processing error:', error);
+      setError(error.message || 'Failed to process YouTube video');
+    } finally {
+      setYoutubeProcessing(false);
+    }
+  };
+
 
   const formatDate = (date: string | Date) => {
     const d = new Date(date);
@@ -143,6 +203,7 @@ const Ideation = () => {
     if (activeFilter === 'news' && idea.source === 'ai' && idea.ai_model === 'gpt-5') return true;
     if (activeFilter === 'ai' && idea.source === 'ai' && idea.ai_model !== 'gpt-5') return true;
     if (activeFilter === 'slack' && idea.source === 'slack') return true;
+    if (activeFilter === 'youtube' && idea.source === 'youtube') return true;
     return false;
   });
 
@@ -156,6 +217,9 @@ const Ideation = () => {
     if (idea.source === 'slack') {
       return { label: 'Slack', icon: MessageSquare, color: 'bg-green-500' };
     }
+    if (idea.source === 'youtube') {
+      return { label: 'YouTube', icon: Youtube, color: 'bg-red-500' };
+    }
     return { label: 'Manual', icon: Edit3, color: 'bg-gray-500' };
   };
 
@@ -163,7 +227,8 @@ const Ideation = () => {
     { value: 'all', label: 'All Ideas', count: ideas.length },
     { value: 'news', label: 'News & Trends', count: ideas.filter(i => i.source === 'ai' && i.ai_model === 'gpt-5').length },
     { value: 'ai', label: 'AI Generated', count: ideas.filter(i => i.source === 'ai' && i.ai_model !== 'gpt-5').length },
-    { value: 'slack', label: 'Slack', count: ideas.filter(i => i.source === 'slack').length }
+    { value: 'slack', label: 'Slack', count: ideas.filter(i => i.source === 'slack').length },
+    { value: 'youtube', label: 'YouTube', count: ideas.filter(i => i.source === 'youtube').length }
   ];
 
   return (
@@ -186,7 +251,15 @@ const Ideation = () => {
               )}
               
               <button
-                onClick={() => console.log('Generate AI Ideas clicked')}
+                onClick={() => setShowYouTubeModal(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all font-medium text-sm"
+              >
+                <Youtube className="h-4 w-4" />
+                YouTube Ideas
+              </button>
+              
+              <button
+                onClick={() => setShowNewIdeaModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all font-medium text-sm"
               >
                 <Plus className="h-4 w-4" />
@@ -370,6 +443,34 @@ const Ideation = () => {
               </a>
             )}
 
+            {selectedIdea.source === 'youtube' && selectedIdea.source_metadata && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Youtube className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-900">YouTube Video</span>
+                </div>
+                {selectedIdea.source_metadata.video_title && (
+                  <p className="text-sm text-red-800 mb-1">
+                    <strong>Title:</strong> {selectedIdea.source_metadata.video_title}
+                  </p>
+                )}
+                {selectedIdea.source_metadata.channel_name && (
+                  <p className="text-sm text-red-800 mb-2">
+                    <strong>Channel:</strong> {selectedIdea.source_metadata.channel_name}
+                  </p>
+                )}
+                <a
+                  href={selectedIdea.source_metadata.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
+                >
+                  <Play className="h-3 w-3" />
+                  Watch Video
+                </a>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -407,7 +508,7 @@ const Ideation = () => {
         </div>
       )}
 
-      {/* Modals remain the same */}
+      {/* New Idea Modal */}
       {showNewIdeaModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -442,6 +543,79 @@ const Ideation = () => {
                 className="flex-1 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors"
               >
                 Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* YouTube Ideas Modal */}
+      {showYouTubeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Youtube className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-zinc-900">YouTube Content Ideas</h2>
+                <p className="text-sm text-zinc-500">Extract transcript and generate 5 content ideas</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">YouTube URL</label>
+                <input
+                  type="url"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  disabled={youtubeProcessing}
+                />
+                <p className="text-xs text-zinc-500 mt-1">
+                  Paste any YouTube video URL. We'll extract the transcript and generate LinkedIn content ideas.
+                </p>
+              </div>
+              
+              {youtubeUrl && youTubeTranscriptService.isValidYouTubeUrl(youtubeUrl) && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-green-800">Valid YouTube URL detected</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowYouTubeModal(false);
+                  setYoutubeUrl('');
+                }}
+                disabled={youtubeProcessing}
+                className="flex-1 px-4 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleYouTubeSubmit}
+                disabled={youtubeProcessing || !youtubeUrl || !youTubeTranscriptService.isValidYouTubeUrl(youtubeUrl)}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {youtubeProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate Ideas
+                  </>
+                )}
               </button>
             </div>
           </div>
