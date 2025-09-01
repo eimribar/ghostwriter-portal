@@ -5,27 +5,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
-const apifyApiKey = process.env.APIFY_API_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing Supabase environment variables');
-}
-
-if (!openaiApiKey) {
-  console.error('❌ Missing OpenAI API key');
-  console.error('  - OPENAI_API_KEY:', !!process.env.OPENAI_API_KEY);
-  console.error('  - VITE_OPENAI_API_KEY:', !!process.env.VITE_OPENAI_API_KEY);
-}
-
-if (!apifyApiKey) {
-  console.error('❌ Missing Apify API key');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 export default async function handler(req, res) {
   // Enhanced CORS headers for all deployments
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -42,6 +21,15 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Load environment variables INSIDE handler (like working process-search.js)
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+  const apifyApiKey = process.env.APIFY_API_KEY || process.env.VITE_APIFY_API_KEY;
+
+  // Initialize Supabase client INSIDE handler
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Early environment check with more debugging info
   console.log('🔧 Environment check:');
