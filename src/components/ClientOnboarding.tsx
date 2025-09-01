@@ -164,7 +164,27 @@ export const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete, 
         updated_at: new Date().toISOString(),
       };
 
-      console.log('Attempting to create client with data:', clientData);
+      console.log('🎯 Attempting to create client with data:', clientData);
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email)) {
+        throw new Error('Please provide a valid email address');
+      }
+
+      // Check if client already exists (case-insensitive)
+      const { data: existingClient, error: checkError } = await supabase
+        .from('clients')
+        .select('id, name, email')
+        .ilike('email', data.email)
+        .single();
+      
+      if (existingClient) {
+        throw new Error(`A client with email ${data.email} already exists: ${existingClient.name}`);
+      } else if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Error checking for existing client:', checkError);
+        throw new Error(`Database error checking for existing client: ${checkError.message}`);
+      }
 
       // Create the client in the database
       const { data: newClient, error: clientError } = await supabase
@@ -174,15 +194,32 @@ export const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete, 
         .single();
 
       if (clientError) {
-        console.error('Supabase error creating client:', clientError);
+        console.error('❌ Supabase error creating client:', {
+          code: clientError.code,
+          message: clientError.message,
+          details: clientError.details,
+          hint: clientError.hint
+        });
         
-        // Check for RLS policy error
+        // Check for specific error types
         if (clientError.message?.includes('row-level security') || clientError.code === '42501') {
-          throw new Error('Database permissions error. Please run the fix_clients_rls_policy.sql script in Supabase SQL Editor.');
+          throw new Error('Database permissions error. Please contact support - RLS policy needs updating.');
+        } else if (clientError.message?.includes('duplicate key') || clientError.code === '23505') {
+          throw new Error('A client with this email already exists. Please use a different email address.');
+        } else if (clientError.message?.includes('foreign key') || clientError.code === '23503') {
+          throw new Error('Database relationship error. Please contact support.');
+        } else if (clientError.message?.includes('not-null') || clientError.code === '23502') {
+          throw new Error('Missing required information. Please fill in all required fields.');
+        } else {
+          throw new Error(`Failed to create client: ${clientError.message || 'Unknown database error'}`);
         }
-        
-        throw clientError;
       }
+
+      if (!newClient) {
+        throw new Error('Client was created but no data was returned. Please refresh and try again.');
+      }
+      
+      console.log('✅ Client created successfully:', newClient.name);
 
       // Always send SSO invitation for new clients
       if (newClient && data.send_invitation) {

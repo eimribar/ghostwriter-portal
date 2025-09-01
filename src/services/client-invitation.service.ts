@@ -28,9 +28,35 @@ export const clientInvitationService = {
    */
   async sendInvitation(clientId: string, customMessage?: string): Promise<{ success: boolean; invitation?: ClientInvitation; error?: string; emailFailed?: boolean; invitationToken?: string }> {
     try {
-      console.log('📧 Sending SSO invitation for client:', clientId);
+      console.log('📧 Starting invitation process for client:', clientId);
+      
+      // First verify client exists
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id, name, email, invitation_status, auth_status')
+        .eq('id', clientId)
+        .single();
+        
+      if (clientError || !client) {
+        console.error('❌ Client not found:', clientError);
+        return { success: false, error: 'Client not found or database error' };
+      }
+      
+      console.log('📋 Client details:', {
+        name: client.name,
+        email: client.email,
+        invitation_status: client.invitation_status,
+        auth_status: client.auth_status
+      });
+      
+      // Check if already invited recently
+      if (client.invitation_status === 'accepted') {
+        console.log('⚠️ Client has already accepted an invitation');
+        return { success: false, error: 'Client has already accepted an invitation' };
+      }
       
       // Use the professional email invitation service
+      console.log('🚀 Calling email invitation service...');
       const result = await emailInvitationService.createAndSendInvitation(
         clientId,
         customMessage,
