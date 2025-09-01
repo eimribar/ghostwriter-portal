@@ -169,6 +169,9 @@ export default async function handler(req, res) {
 
     // Step 3: Prepare GPT-5 Responses API call (matches working process-search.js)
     console.log('🤖 Processing with GPT-5 Responses API...');
+    console.log('📝 Using prompt template:', promptTemplate.name);
+    console.log('📝 System message preview (first 500 chars):', promptTemplate.system_message.substring(0, 500));
+    console.log('📝 Apify data items count:', apifyData.length);
     
     // Step 4: Call GPT-5 Responses API (EXACT format from process-search.js)
     const gpt5Response = await fetch('https://api.openai.com/v1/responses', {
@@ -235,13 +238,20 @@ export default async function handler(req, res) {
     }
 
     console.log('✅ GPT-5 response generated:', responseText.length, 'characters');
+    console.log('📋 Full GPT-5 response text (first 1000 chars):', responseText.substring(0, 1000));
 
     // Step 5: Parse the 5 content ideas from the response
     const ideas = parseContentIdeas(responseText);
     
     if (ideas.length === 0) {
       console.error('❌ No content ideas parsed from response');
-      return res.status(500).json({ error: 'Failed to parse content ideas from GPT-5 response' });
+      console.log('Raw GPT-5 response was:', responseText);
+      return res.status(500).json({ 
+        error: 'Failed to parse content ideas from GPT-5 response',
+        details: 'GPT-5 responded but no ideas could be extracted',
+        responsePreview: responseText.substring(0, 1000),
+        promptUsed: promptTemplate.name
+      });
     }
 
     console.log('🎯 Parsed', ideas.length, 'content ideas');
