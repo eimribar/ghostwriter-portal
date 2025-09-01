@@ -240,6 +240,19 @@ export default async function handler(req, res) {
     console.log('✅ GPT-5 response generated:', responseText.length, 'characters');
     console.log('📋 Full GPT-5 response text (first 1000 chars):', responseText.substring(0, 1000));
 
+    // TEMPORARY DEBUG: Return raw response to see what GPT-5 is actually returning
+    return res.status(200).json({
+      success: true,
+      debug: true,
+      rawResponse: responseText,
+      responseLength: responseText.length,
+      videoData: {
+        url: videoUrl,
+        title: videoTitle,
+        channel: channelName
+      }
+    });
+
     // Step 5: Parse the 5 content ideas from the response
     const ideas = parseContentIdeas(responseText);
     
