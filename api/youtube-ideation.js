@@ -41,12 +41,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Early environment check
+  // Early environment check with more debugging info
   console.log('🔧 Environment check:');
-  console.log('  - Supabase URL configured:', !!supabaseUrl);
-  console.log('  - Supabase Key configured:', !!supabaseKey);
-  console.log('  - OpenAI API Key configured:', !!openaiApiKey);
-  console.log('  - Apify API Key configured:', !!apifyApiKey);
+  console.log('  - Supabase URL configured:', !!supabaseUrl, supabaseUrl?.substring(0, 30) + '...');
+  console.log('  - Supabase Key configured:', !!supabaseKey, supabaseKey?.substring(0, 20) + '...');
+  console.log('  - OpenAI API Key configured:', !!openaiApiKey, openaiApiKey?.substring(0, 20) + '...');
+  console.log('  - Apify API Key configured:', !!apifyApiKey, apifyApiKey?.substring(0, 20) + '...');
+  
+  // Additional OpenAI API key checks
+  if (openaiApiKey) {
+    console.log('  - OpenAI API Key length:', openaiApiKey.length);
+    console.log('  - OpenAI API Key starts with sk-:', openaiApiKey.startsWith('sk-'));
+  }
 
   try {
     const { videoUrl, promptId } = req.body;
@@ -171,11 +177,14 @@ export default async function handler(req, res) {
       }
     }
 
-    // Step 3: Prepare the prompt exactly like n8n workflow
-    console.log('🤖 Processing with GPT-5...');
+    // Step 3: Prepare the prompt for GPT-5 Responses API (thinking model)
+    console.log('🤖 Processing with GPT-5 Responses API (thinking model)...');
     
-    // Step 4: Call GPT-5 API with separate system and user messages (like n8n)
-    const gpt5Response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Combine system message and transcript data like your working implementations
+    const fullPrompt = promptTemplate.system_message + "\n\n=Transcript : \n\n" + JSON.stringify(apifyData);
+    
+    // Step 4: Call GPT-5 Responses API (matches your working process-search.js format)
+    const gpt5Response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -183,18 +192,16 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-5',
-        messages: [
-          {
-            role: 'system',
-            content: promptTemplate.system_message
-          },
-          {
-            role: 'user',
-            content: `=Transcript : \n\n${JSON.stringify(apifyData)}`
-          }
-        ],
+        input: [{
+          role: 'user',
+          content: [{
+            type: 'input_text',
+            text: fullPrompt
+          }]
+        }],
+        reasoning: { effort: 'medium' },
         temperature: 0.8,
-        max_tokens: 4000
+        max_output_tokens: 4000
       })
     });
 
@@ -206,10 +213,19 @@ export default async function handler(req, res) {
 
     const gpt5Data = await gpt5Response.json();
     
-    // Extract the response text from OpenAI chat completions format
+    // Extract the response text from GPT-5 Responses API format (matches your working implementations)
     let responseText = '';
-    if (gpt5Data.choices && gpt5Data.choices.length > 0) {
-      responseText = gpt5Data.choices[0].message?.content || '';
+    if (gpt5Data.output && gpt5Data.output.length > 0) {
+      // Look for message type in output array
+      const messageOutput = gpt5Data.output.find(item => item.type === 'message');
+      if (messageOutput && messageOutput.content && messageOutput.content.length > 0) {
+        responseText = messageOutput.content[0].text;
+      }
+    }
+    
+    // Fallback: check for direct output_text field
+    if (!responseText && gpt5Data.output_text) {
+      responseText = gpt5Data.output_text;
     }
 
     if (!responseText) {
