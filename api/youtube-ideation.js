@@ -94,19 +94,63 @@ export default async function handler(req, res) {
 
     const apifyData = await apifyResponse.json();
     console.log('✅ Apify response received:', apifyData?.length || 0, 'items');
-
-    if (!apifyData || apifyData.length === 0) {
-      return res.status(400).json({ error: 'No transcript data returned from Apify' });
+    
+    // Enhanced debugging: Log the full structure of the first item
+    if (apifyData && apifyData.length > 0) {
+      console.log('📋 Apify data structure (first item):', JSON.stringify(apifyData[0], null, 2));
     }
 
-    // Extract transcript text and video metadata
-    const transcriptData = apifyData[0];
-    const transcript = transcriptData.transcript || transcriptData.text || '';
-    const videoTitle = transcriptData.title || 'YouTube Video';
-    const channelName = transcriptData.channelName || transcriptData.channel || 'Unknown Channel';
+    if (!apifyData || apifyData.length === 0) {
+      return res.status(400).json({ 
+        error: 'No transcript data returned from Apify', 
+        details: 'The video may not have captions or subtitles available'
+      });
+    }
 
-    if (!transcript) {
-      return res.status(400).json({ error: 'No transcript found in the video' });
+    // Extract transcript text and video metadata with multiple fallbacks
+    const transcriptData = apifyData[0];
+    
+    // Try multiple fields for transcript (enhanced fallback)
+    const transcript = transcriptData.transcript || 
+                      transcriptData.text || 
+                      transcriptData.captions || 
+                      transcriptData.subtitles ||
+                      transcriptData.transcription ||
+                      (transcriptData.items && transcriptData.items.map(item => item.text).join(' ')) ||
+                      '';
+    
+    // Try multiple fields for video title
+    const videoTitle = transcriptData.title || 
+                      transcriptData.videoTitle || 
+                      transcriptData.name ||
+                      'YouTube Video';
+    
+    // Try multiple fields for channel name
+    const channelName = transcriptData.channelName || 
+                       transcriptData.channel || 
+                       transcriptData.channelTitle ||
+                       transcriptData.author ||
+                       transcriptData.uploader ||
+                       'Unknown Channel';
+
+    console.log('📊 Transcript extraction results:', {
+      transcriptLength: transcript.length,
+      videoTitle: videoTitle,
+      channelName: channelName,
+      availableFields: Object.keys(transcriptData)
+    });
+
+    if (!transcript || transcript.trim().length === 0) {
+      console.error('❌ No transcript content found');
+      console.log('Available data fields:', Object.keys(transcriptData));
+      console.log('Sample of transcriptData:', JSON.stringify(transcriptData, null, 2));
+      
+      return res.status(400).json({ 
+        error: 'No transcript found in the video',
+        details: 'This video may not have captions, subtitles, or auto-generated transcripts available. Try a different video with captions enabled.',
+        availableFields: Object.keys(transcriptData),
+        debugInfo: process.env.NODE_ENV === 'development' ? transcriptData : undefined
+      });
     }
 
     console.log('📊 Transcript extracted:', {
@@ -176,7 +220,7 @@ export default async function handler(req, res) {
     console.log('🤖 Processing with GPT-5...');
     
     // Step 4: Call GPT-5 API with the transcript and prompt
-    const gpt5Response = await fetch('https://api.openai.com/v1/responses', {
+    const gpt5Response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -184,16 +228,12 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'gpt-5',
-        input: [{
+        messages: [{
           role: 'user',
-          content: [{
-            type: 'input_text',
-            text: fullPrompt
-          }]
+          content: fullPrompt
         }],
-        reasoning: { effort: 'medium' },
         temperature: 0.8,
-        max_output_tokens: 4000
+        max_tokens: 4000
       })
     });
 
@@ -205,17 +245,15 @@ export default async function handler(req, res) {
 
     const gpt5Data = await gpt5Response.json();
     
-    // Extract the response text
+    // Extract the response text from OpenAI chat completions format
     let responseText = '';
-    if (gpt5Data.output && gpt5Data.output.length > 1) {
-      const messageOutput = gpt5Data.output.find(item => item.type === 'message');
-      if (messageOutput && messageOutput.content && messageOutput.content.length > 0) {
-        responseText = messageOutput.content[0].text;
-      }
+    if (gpt5Data.choices && gpt5Data.choices.length > 0) {
+      responseText = gpt5Data.choices[0].message?.content || '';
     }
 
     if (!responseText) {
       console.error('❌ No response text from GPT-5');
+      console.log('GPT-5 response structure:', JSON.stringify(gpt5Data, null, 2));
       return res.status(500).json({ error: 'No response generated from GPT-5' });
     }
 

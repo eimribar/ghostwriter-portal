@@ -120,59 +120,45 @@ const Ideation = () => {
   };
 
   const handleYouTubeSubmit = async () => {
-    if (!youtubeUrl.trim()) {
-      setError('Please enter a YouTube URL');
-      return;
-    }
-
-    if (!youTubeTranscriptService.isValidYouTubeUrl(youtubeUrl)) {
-      setError('Please enter a valid YouTube URL');
+    if (!youtubeUrl || !youTubeTranscriptService.isValidYouTubeUrl(youtubeUrl)) {
+      setError('Please provide a valid YouTube URL');
       return;
     }
 
     setYoutubeProcessing(true);
     setError(null);
-
+    
     try {
-      console.log('🎬 Processing YouTube video:', youtubeUrl);
+      console.log('🎬 Starting YouTube processing for:', youtubeUrl);
       
       const result = await youTubeTranscriptService.processVideo({
-        videoUrl: youtubeUrl
+        videoUrl: youtubeUrl,
+        promptId: undefined
       });
-
+      
       if (result.success) {
         console.log('✅ YouTube processing successful:', result.totalIdeas, 'ideas generated');
+        
+        // Refresh the ideas list to show new YouTube ideas
+        await loadIdeas();
         
         // Close modal and reset form
         setShowYouTubeModal(false);
         setYoutubeUrl('');
         
-        // Reload ideas to show new ones
-        await loadIdeas();
-        
         // Show success message
-        const videoTitle = result.videoData?.title || 'video';
         setError(null);
-        
-        // Show a success notification (you could use a toast library instead)
-        setTimeout(() => {
-          setError(`✅ Generated ${result.totalIdeas} content ideas from "${videoTitle}"`);
-          setTimeout(() => setError(null), 5000);
-        }, 500);
-        
       } else {
         console.error('❌ YouTube processing failed:', result.error);
         setError(result.error || 'Failed to process YouTube video');
       }
-      
-    } catch (error: any) {
-      console.error('❌ YouTube processing error:', error);
-      setError(error.message || 'Failed to process YouTube video');
+    } catch (err: any) {
+      console.error('❌ YouTube service error:', err);
+      setError(err.message || 'An unexpected error occurred while processing the video');
     } finally {
       setYoutubeProcessing(false);
     }
   };
-
 
   const formatDate = (date: string | Date) => {
     const d = new Date(date);
