@@ -57,7 +57,7 @@ export interface ContentIdea {
   ghostwriter_id?: string;
   user_id?: string;
   source_post_id?: string;
-  source?: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request';
+  source?: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request' | 'competitor' | 'slack' | 'youtube';
   title: string;
   description?: string;
   hook?: string;
@@ -68,6 +68,7 @@ export interface ContentIdea {
   priority?: 'high' | 'medium' | 'low';
   status?: 'draft' | 'ready' | 'in-progress' | 'used' | 'archived';
   score?: number;
+  source_metadata?: any;
   created_at: Date;
   updated_at: Date;
 }

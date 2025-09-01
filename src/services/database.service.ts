@@ -740,7 +740,7 @@ export interface ContentIdeaDB {
   ghostwriter_id?: string;
   user_id?: string;
   source_post_id?: string;
-  source: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request' | 'competitor' | 'slack';
+  source: 'trending' | 'ai' | 'manual' | 'content-lake' | 'client-request' | 'competitor' | 'slack' | 'youtube';
   title: string;
   description?: string;
   hook?: string;
@@ -772,6 +772,7 @@ export interface ContentIdeaDB {
   slack_channel_id?: string;
   slack_user_name?: string;
   original_message_url?: string;
+  source_metadata?: any;
   used_count: number;
   created_at: Date;
   updated_at: Date;
