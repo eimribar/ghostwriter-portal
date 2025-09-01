@@ -281,7 +281,7 @@ export default async function handler(req, res) {
           ai_reasoning_effort: 'medium',
           linkedin_style: idea.linkedInStyle,
           hashtags: idea.tags || [],
-          source: 'youtube',
+          source: 'ai',
           ai_generation_params: {
             video_url: videoUrl,
             video_title: videoTitle,

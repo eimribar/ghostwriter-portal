@@ -189,12 +189,16 @@ const Ideation = () => {
     if (activeFilter === 'news' && idea.source === 'ai' && idea.ai_model === 'gpt-5') return true;
     if (activeFilter === 'ai' && idea.source === 'ai' && idea.ai_model !== 'gpt-5') return true;
     if (activeFilter === 'slack' && idea.source === 'slack') return true;
-    if (activeFilter === 'youtube' && idea.source === 'youtube') return true;
+    if (activeFilter === 'youtube' && idea.source === 'ai' && idea.ai_generation_params?.video_url) return true;
     return false;
   });
 
   const getSourceBadge = (idea: ContentIdeaDB) => {
-    if (idea.source === 'ai' && idea.ai_model === 'gpt-5') {
+    // Check if this is a YouTube idea (AI-generated from video)
+    if (idea.source === 'ai' && idea.ai_generation_params?.video_url) {
+      return { label: 'YouTube', icon: Youtube, color: 'bg-red-500' };
+    }
+    if (idea.source === 'ai' && idea.ai_model === 'gpt-5' && !idea.ai_generation_params?.video_url) {
       return { label: 'News', icon: TrendingUp, color: 'bg-blue-500' };
     }
     if (idea.source === 'ai') {
@@ -203,18 +207,15 @@ const Ideation = () => {
     if (idea.source === 'slack') {
       return { label: 'Slack', icon: MessageSquare, color: 'bg-green-500' };
     }
-    if (idea.source === 'youtube') {
-      return { label: 'YouTube', icon: Youtube, color: 'bg-red-500' };
-    }
     return { label: 'Manual', icon: Edit3, color: 'bg-gray-500' };
   };
 
   const filterOptions = [
     { value: 'all', label: 'All Ideas', count: ideas.length },
-    { value: 'news', label: 'News & Trends', count: ideas.filter(i => i.source === 'ai' && i.ai_model === 'gpt-5').length },
-    { value: 'ai', label: 'AI Generated', count: ideas.filter(i => i.source === 'ai' && i.ai_model !== 'gpt-5').length },
+    { value: 'news', label: 'News & Trends', count: ideas.filter(i => i.source === 'ai' && i.ai_model === 'gpt-5' && !i.ai_generation_params?.video_url).length },
+    { value: 'ai', label: 'AI Generated', count: ideas.filter(i => i.source === 'ai' && i.ai_model !== 'gpt-5' && !i.ai_generation_params?.video_url).length },
     { value: 'slack', label: 'Slack', count: ideas.filter(i => i.source === 'slack').length },
-    { value: 'youtube', label: 'YouTube', count: ideas.filter(i => i.source === 'youtube').length }
+    { value: 'youtube', label: 'YouTube', count: ideas.filter(i => i.source === 'ai' && i.ai_generation_params?.video_url).length }
   ];
 
   return (
