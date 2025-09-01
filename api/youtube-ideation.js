@@ -255,6 +255,7 @@ export default async function handler(req, res) {
     }
 
     console.log('🎯 Parsed', ideas.length, 'content ideas');
+    console.log('📝 First idea structure:', JSON.stringify(ideas[0], null, 2));
 
     // Step 6: Save each idea to the database
     const savedIdeas = [];
@@ -265,7 +266,20 @@ export default async function handler(req, res) {
       const { data: savedIdea, error: saveError } = await supabase
         .from('content_ideas')
         .insert({
-          content: idea,
+          title: idea.title,
+          description: idea.description,
+          hook: idea.hook,
+          key_points: idea.keyPoints || [],
+          target_audience: idea.targetAudience,
+          content_format: idea.contentFormat,
+          category: idea.category,
+          priority: idea.engagementScore >= 8 ? 'high' : idea.engagementScore >= 6 ? 'medium' : 'low',
+          status: 'ready',
+          score: idea.engagementScore,
+          ai_model: 'gpt-5',
+          ai_reasoning_effort: 'medium',
+          linkedin_style: idea.linkedInStyle,
+          hashtags: idea.tags || [],
           source: 'youtube',
           source_metadata: {
             video_url: videoUrl,
@@ -286,9 +300,10 @@ export default async function handler(req, res) {
         
       if (saveError) {
         console.error(`❌ Error saving idea ${i + 1}:`, saveError);
+        console.log(`📝 Idea that failed to save:`, JSON.stringify(idea, null, 2));
       } else {
         savedIdeas.push(savedIdea);
-        console.log(`✅ Saved idea ${i + 1}:`, idea.substring(0, 100) + '...');
+        console.log(`✅ Saved idea ${i + 1}:`, idea.title);
       }
     }
 
@@ -354,21 +369,28 @@ function parseContentIdeas(responseText) {
     
     // Split the text into sections - each idea is separated by double newlines
     let sections = responseText.split('\n\n').filter(section => section.trim() !== '');
+    console.log('📝 Initial sections count:', sections.length);
+    console.log('📝 First section:', sections[0]?.substring(0, 200));
     
     // Remove the intro line if it exists
     if (sections.length > 0 && sections[0].toLowerCase().includes('content idea')) {
       sections = sections.slice(1);
+      console.log('📝 Removed intro, sections count:', sections.length);
     }
     
     // If still not enough ideas, try splitting by numbered patterns
     if (sections.length < 5) {
+      console.log('📝 Not enough sections, trying numbered pattern split');
       // Try splitting by patterns like "1)" or "1." at the start of lines
       const numberedSections = responseText.split(/\n(?=\d+[\.)]\s)/).filter(s => s.trim());
+      console.log('📝 Numbered sections count:', numberedSections.length);
       
       // Remove any intro text
       const startIndex = numberedSections.findIndex(s => /^\d+[\.)]\s/.test(s.trim()));
+      console.log('📝 Start index of numbered content:', startIndex);
       if (startIndex >= 0) {
         sections = numberedSections.slice(startIndex);
+        console.log('📝 Final sections after numbered split:', sections.length);
       }
     }
     
@@ -380,10 +402,33 @@ function parseContentIdeas(responseText) {
         .replace(/^\*\*/, '') // Remove leading bold markers
         .replace(/\*\*$/, ''); // Remove trailing bold markers
       
-      return cleanIdea;
-    }).filter(idea => idea && idea.length > 20); // Only include substantial ideas
+      // Extract title from first line or first 100 characters
+      const lines = cleanIdea.split('\n').filter(line => line.trim());
+      const title = lines[0] ? lines[0].substring(0, 100).trim() : `YouTube Content Idea ${index + 1}`;
+      const description = cleanIdea;
+      
+      // Extract hook (first compelling line)
+      const hook = lines[0] && lines[0].length > 20 ? lines[0] : 
+                   (lines[1] && lines[1].length > 20 ? lines[1] : 
+                    cleanIdea.substring(0, 150) + '...');
+      
+      return {
+        title: title,
+        description: description,
+        hook: hook,
+        keyPoints: lines.slice(1, 4).filter(line => line.length > 10), // Extract key points from content
+        targetAudience: 'RevOps professionals and B2B leaders',
+        contentFormat: 'thought-leadership',
+        category: 'RevOps',
+        engagementScore: 8, // Default high score for curated YouTube content
+        linkedInStyle: 'provocative',
+        tags: ['RevOps', 'YouTube', 'Content'],
+        source: 'youtube'
+      };
+    }).filter(idea => idea && idea.description && idea.description.length > 20); // Only include substantial ideas
     
     console.log('📝 Parsed ideas count:', ideas.length);
+    console.log('📝 Ideas titles:', ideas.map(idea => idea.title));
     
     // Ensure we return at least something
     if (ideas.length === 0) {
