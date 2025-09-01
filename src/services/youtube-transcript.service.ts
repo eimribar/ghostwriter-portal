@@ -47,10 +47,8 @@ export const youTubeTranscriptService = {
         };
       }
 
-      // Prepare API request
-      const apiUrl = import.meta.env.PROD 
-        ? 'https://ghostwriter-portal.vercel.app/api/youtube-ideation'
-        : '/api/youtube-ideation';
+      // Use relative API path that works for all deployments
+      const apiUrl = '/api/youtube-ideation';
 
       console.log('🚀 Calling YouTube ideation API...');
 

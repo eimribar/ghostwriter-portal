@@ -25,18 +25,28 @@ if (!apifyApiKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
-  // Set CORS headers
+  // Enhanced CORS headers for all deployments
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
 
+  // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
+    console.log('🔍 Handling CORS preflight request');
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Early environment check
+  console.log('🔧 Environment check:');
+  console.log('  - Supabase URL configured:', !!supabaseUrl);
+  console.log('  - Supabase Key configured:', !!supabaseKey);
+  console.log('  - OpenAI API Key configured:', !!openaiApiKey);
+  console.log('  - Apify API Key configured:', !!apifyApiKey);
 
   try {
     const { videoUrl, promptId } = req.body;
@@ -45,8 +55,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'videoUrl is required' });
     }
 
-    if (!apifyApiKey) {
-      return res.status(500).json({ error: 'Apify API key not configured' });
+    // Check all required environment variables
+    const missingEnvVars = [];
+    if (!supabaseUrl) missingEnvVars.push('SUPABASE_URL');
+    if (!supabaseKey) missingEnvVars.push('SUPABASE_ANON_KEY');
+    if (!openaiApiKey) missingEnvVars.push('OPENAI_API_KEY');
+    if (!apifyApiKey) missingEnvVars.push('APIFY_API_KEY');
+
+    if (missingEnvVars.length > 0) {
+      console.error('❌ Missing environment variables:', missingEnvVars);
+      return res.status(500).json({ 
+        error: 'Server configuration error: Missing environment variables',
+        details: `Please configure: ${missingEnvVars.join(', ')}`,
+        missingVars: missingEnvVars
+      });
     }
 
     console.log('🎬 Starting YouTube transcript processing for:', videoUrl);
@@ -267,11 +289,33 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('❌ YouTube ideation error:', error);
     
-    return res.status(500).json({
+    // Enhanced error response with debugging info
+    const errorResponse = {
       success: false,
       error: error.message || 'Unknown error occurred',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+      timestamp: new Date().toISOString(),
+      videoUrl: req.body?.videoUrl,
+      stage: 'unknown'
+    };
+
+    // Add detailed error info for debugging
+    if (error.message?.includes('Apify')) {
+      errorResponse.stage = 'transcript-extraction';
+      errorResponse.details = 'Failed to extract transcript from video. Check if video has captions.';
+    } else if (error.message?.includes('GPT-5')) {
+      errorResponse.stage = 'content-generation';
+      errorResponse.details = 'Failed to generate content ideas. Check OpenAI API key and model access.';
+    } else if (error.message?.includes('Supabase')) {
+      errorResponse.stage = 'database-save';
+      errorResponse.details = 'Failed to save ideas to database. Check Supabase configuration.';
+    }
+
+    // Include stack trace in development
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.stack = error.stack;
+    }
+    
+    return res.status(500).json(errorResponse);
   }
 }
 
