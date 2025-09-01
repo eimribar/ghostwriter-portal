@@ -240,18 +240,11 @@ export default async function handler(req, res) {
     console.log('✅ GPT-5 response generated:', responseText.length, 'characters');
     console.log('📋 Full GPT-5 response text (first 1000 chars):', responseText.substring(0, 1000));
 
-    // TEMPORARY DEBUG: Return raw response to see what GPT-5 is actually returning
-    return res.status(200).json({
-      success: true,
-      debug: true,
-      rawResponse: responseText,
-      responseLength: responseText.length,
-      videoData: {
-        url: videoUrl,
-        title: videoTitle,
-        channel: channelName
-      }
-    });
+    // DEBUG: Log the raw GPT-5 response for analysis
+    console.log('🔍 Raw GPT-5 response structure analysis:');
+    console.log('Response starts with:', responseText.substring(0, 200));
+    console.log('Contains numbered items:', /\d+\)/.test(responseText));
+    console.log('Contains Title: format:', /Title:/.test(responseText));
 
     // Step 5: Parse the 5 content ideas from the response
     const ideas = parseContentIdeas(responseText);
@@ -380,56 +373,112 @@ function parseContentIdeas(responseText) {
   try {
     console.log('📝 Parsing GPT-5 response (first 500 chars):', responseText.substring(0, 500));
     
-    // Split the text into sections - each idea is separated by double newlines
-    let sections = responseText.split('\n\n').filter(section => section.trim() !== '');
-    console.log('📝 Initial sections count:', sections.length);
-    console.log('📝 First section:', sections[0]?.substring(0, 200));
+    // Handle the specific GPT-5 response format with "Title:" and "Thesis:" structure
+    let sections = [];
     
-    // Remove the intro line if it exists
-    if (sections.length > 0 && sections[0].toLowerCase().includes('content idea')) {
-      sections = sections.slice(1);
-      console.log('📝 Removed intro, sections count:', sections.length);
-    }
-    
-    // If still not enough ideas, try splitting by numbered patterns
-    if (sections.length < 5) {
-      console.log('📝 Not enough sections, trying numbered pattern split');
-      // Try splitting by patterns like "1)" or "1." at the start of lines
-      const numberedSections = responseText.split(/\n(?=\d+[\.)]\s)/).filter(s => s.trim());
-      console.log('📝 Numbered sections count:', numberedSections.length);
+    // Try splitting by numbered patterns first (like "1) Title:", "2) Title:", etc.)
+    if (responseText.includes('Title:')) {
+      console.log('📝 Detected Title: format, using numbered Title pattern');
+      const numberedTitleSections = responseText.split(/(?=\d+\)\s*Title:)/).filter(s => s.trim());
+      console.log('📝 Numbered title sections found:', numberedTitleSections.length);
       
-      // Remove any intro text
-      const startIndex = numberedSections.findIndex(s => /^\d+[\.)]\s/.test(s.trim()));
-      console.log('📝 Start index of numbered content:', startIndex);
+      // Remove intro text (anything before first numbered title)
+      const startIndex = numberedTitleSections.findIndex(s => /^\d+\)\s*Title:/.test(s.trim()));
       if (startIndex >= 0) {
-        sections = numberedSections.slice(startIndex);
-        console.log('📝 Final sections after numbered split:', sections.length);
+        sections = numberedTitleSections.slice(startIndex);
+        console.log('📝 Using title-based sections:', sections.length);
       }
     }
     
-    // Process each idea - match n8n Code node logic exactly
+    // Fallback to double newline separation
+    if (sections.length === 0) {
+      console.log('📝 Falling back to double newline split');
+      sections = responseText.split('\n\n').filter(section => section.trim() !== '');
+      console.log('📝 Double newline sections:', sections.length);
+      
+      // Remove intro if it exists
+      if (sections.length > 0 && (sections[0].toLowerCase().includes('content idea') || sections[0].length < 100)) {
+        sections = sections.slice(1);
+        console.log('📝 Removed intro, sections count:', sections.length);
+      }
+    }
+    
+    // Final fallback: try basic numbered pattern
+    if (sections.length < 3) {
+      console.log('📝 Final fallback: basic numbered pattern');
+      const numberedSections = responseText.split(/\n(?=\d+[\.)]\s)/).filter(s => s.trim());
+      const startIndex = numberedSections.findIndex(s => /^\d+[\.)]\s/.test(s.trim()));
+      if (startIndex >= 0) {
+        sections = numberedSections.slice(startIndex);
+      }
+    }
+    
+    console.log('📝 Final sections to process:', sections.length);
+    if (sections.length > 0) {
+      console.log('📝 First section preview:', sections[0]?.substring(0, 150));
+    }
+    
+    // Process each idea - handle the Title/Thesis format from GPT-5
     const ideas = sections.slice(0, 5).map((idea, index) => {
+      console.log(`\n📝 Processing idea ${index + 1}:`, idea.substring(0, 100));
+      
       // Clean up the idea text
-      const cleanIdea = idea.trim()
-        .replace(/^[\d\.)]+\s*/, '') // Remove leading numbers like "1)" or "1."
-        .replace(/^\*\*/, '') // Remove leading bold markers
-        .replace(/\*\*$/, ''); // Remove trailing bold markers
+      let cleanIdea = idea.trim()
+        .replace(/^[\d\.)]+\s*/, ''); // Remove leading numbers like "1)" or "1."
       
-      // Extract title from first line or first 100 characters
+      console.log(`📝 Clean idea ${index + 1}:`, cleanIdea.substring(0, 100));
+      
+      // Extract title and content based on the GPT-5 format
+      let title = `YouTube Content Idea ${index + 1}`;
+      let description = cleanIdea;
+      let hook = '';
+      
+      // Check if this is the Title/Thesis format
+      const titleMatch = cleanIdea.match(/Title:\s*(.+?)(?=\n|$)/);
+      const thesisMatch = cleanIdea.match(/Thesis:\s*(.+?)(?=\n|$)/);
+      
+      if (titleMatch) {
+        title = titleMatch[1].trim();
+        console.log(`📝 Extracted title ${index + 1}:`, title);
+      }
+      
+      if (thesisMatch) {
+        hook = thesisMatch[1].trim();
+        console.log(`📝 Extracted thesis ${index + 1}:`, hook.substring(0, 100));
+      }
+      
+      // If no specific format, use first line as title
+      if (!titleMatch) {
+        const lines = cleanIdea.split('\n').filter(line => line.trim());
+        if (lines[0]) {
+          title = lines[0].substring(0, 100).trim();
+        }
+      }
+      
+      // If no thesis, use first compelling line as hook
+      if (!hook) {
+        const lines = cleanIdea.split('\n').filter(line => line.trim());
+        hook = lines.find(line => line.length > 20 && !line.includes('Title:')) || 
+               cleanIdea.substring(0, 150) + '...';
+      }
+      
+      console.log(`📝 Final title ${index + 1}:`, title);
+      console.log(`📝 Final hook ${index + 1}:`, hook.substring(0, 100));
+      console.log(`📝 Description length ${index + 1}:`, description.length);
+      
+      // Extract key points from Core points section or bullet points
       const lines = cleanIdea.split('\n').filter(line => line.trim());
-      const title = lines[0] ? lines[0].substring(0, 100).trim() : `YouTube Content Idea ${index + 1}`;
-      const description = cleanIdea;
-      
-      // Extract hook (first compelling line)
-      const hook = lines[0] && lines[0].length > 20 ? lines[0] : 
-                   (lines[1] && lines[1].length > 20 ? lines[1] : 
-                    cleanIdea.substring(0, 150) + '...');
+      const keyPoints = lines.filter(line => 
+        line.trim().startsWith('-') || 
+        line.trim().startsWith('•') ||
+        (line.includes(':') && line.length < 200)
+      ).slice(0, 4);
       
       return {
         title: title,
         description: description,
         hook: hook,
-        keyPoints: lines.slice(1, 4).filter(line => line.length > 10), // Extract key points from content
+        keyPoints: keyPoints.length > 0 ? keyPoints : lines.slice(1, 4).filter(line => line.length > 10),
         targetAudience: 'RevOps professionals and B2B leaders',
         contentFormat: 'thought-leadership',
         category: 'RevOps',
