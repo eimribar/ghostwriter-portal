@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const openaiApiKey = process.env.OPENAI_API_KEY;
+const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
 const apifyApiKey = process.env.APIFY_API_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
@@ -16,6 +16,8 @@ if (!supabaseUrl || !supabaseKey) {
 
 if (!openaiApiKey) {
   console.error('❌ Missing OpenAI API key');
+  console.error('  - OPENAI_API_KEY:', !!process.env.OPENAI_API_KEY);
+  console.error('  - VITE_OPENAI_API_KEY:', !!process.env.VITE_OPENAI_API_KEY);
 }
 
 if (!apifyApiKey) {
@@ -65,7 +67,7 @@ export default async function handler(req, res) {
     const missingEnvVars = [];
     if (!supabaseUrl) missingEnvVars.push('SUPABASE_URL');
     if (!supabaseKey) missingEnvVars.push('SUPABASE_ANON_KEY');
-    if (!openaiApiKey) missingEnvVars.push('OPENAI_API_KEY');
+    if (!openaiApiKey) missingEnvVars.push('OPENAI_API_KEY or VITE_OPENAI_API_KEY');
     if (!apifyApiKey) missingEnvVars.push('APIFY_API_KEY');
 
     if (missingEnvVars.length > 0) {
