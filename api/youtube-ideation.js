@@ -286,8 +286,8 @@ export default async function handler(req, res) {
           ai_reasoning_effort: 'medium',
           linkedin_style: idea.linkedInStyle,
           hashtags: idea.tags || [],
-          source: 'youtube',
-          source_metadata: {
+          source: 'ai',
+          ai_generation_params: {
             video_url: videoUrl,
             video_title: videoTitle,
             channel_name: channelName,
@@ -484,8 +484,7 @@ function parseContentIdeas(responseText) {
         category: 'RevOps',
         engagementScore: 8, // Default high score for curated YouTube content
         linkedInStyle: 'provocative',
-        tags: ['RevOps', 'YouTube', 'Content'],
-        source: 'youtube'
+        tags: ['RevOps', 'YouTube', 'Content']
       };
     }).filter(idea => idea && idea.description && idea.description.length > 20); // Only include substantial ideas
     
